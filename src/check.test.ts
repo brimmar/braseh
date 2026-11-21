@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { exists, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { dottsCheck } from './commands/check';
+import { brasehCheck } from './commands/check';
 
-describe('dotts check', () => {
-  const testDir = join(tmpdir(), `dotts-check-test-${Math.random().toString(36).slice(2)}`);
+describe('braseh check', () => {
+  const testDir = join(tmpdir(), `braseh-check-test-${Math.random().toString(36).slice(2)}`);
 
   afterEach(async () => {
     if (await exists(testDir)) {
@@ -14,7 +14,7 @@ describe('dotts check', () => {
   });
 
   async function writeTypes(): Promise<void> {
-    const typesDir = join(testDir, '.dotts', 'types');
+    const typesDir = join(testDir, '.braseh', 'types');
     await mkdir(typesDir, { recursive: true });
     await writeFile(join(typesDir, 'index.d.ts'), 'export declare function pkg(name: string): { id: string };\n');
   }
@@ -22,7 +22,7 @@ describe('dotts check', () => {
   it('should validate a correct configuration', async () => {
     await mkdir(testDir, { recursive: true });
     await writeTypes();
-    const configPath = join(testDir, 'dotts-ok.ts');
+    const configPath = join(testDir, 'braseh-ok.ts');
     await writeFile(
       configPath,
       `
@@ -30,13 +30,13 @@ describe('dotts check', () => {
     `,
     );
 
-    await dottsCheck(configPath);
+    await brasehCheck(configPath);
   });
 
   it('should fail on invalid configuration', async () => {
     await mkdir(testDir, { recursive: true });
     await writeTypes();
-    const configPath = join(testDir, 'dotts-fail.ts');
+    const configPath = join(testDir, 'braseh-fail.ts');
     await writeFile(
       configPath,
       `
@@ -49,18 +49,18 @@ describe('dotts check', () => {
     `,
     );
 
-    await expect(dottsCheck(configPath)).rejects.toThrow();
+    await expect(brasehCheck(configPath)).rejects.toThrow();
   });
 
   it('rejects a type error before loading the config', async () => {
     await mkdir(testDir, { recursive: true });
     await writeTypes();
-    const configPath = join(testDir, 'dotts.ts');
+    const configPath = join(testDir, 'braseh.ts');
     const marker = join(testDir, 'loaded.txt');
     await writeFile(
       configPath,
       `import { writeFileSync } from 'node:fs';
-import { pkg } from 'dotts';
+import { pkg } from 'braseh';
 writeFileSync(${JSON.stringify(marker)}, 'loaded');
 export default () => {
   pkg(1);
@@ -68,14 +68,14 @@ export default () => {
 `,
     );
 
-    await expect(dottsCheck(configPath)).rejects.toThrow();
+    await expect(brasehCheck(configPath)).rejects.toThrow();
     expect(await exists(marker)).toBe(false);
   });
 
   it('supports json mode and returns CheckResult', async () => {
     await mkdir(testDir, { recursive: true });
     await writeTypes();
-    const configPath = join(testDir, 'dotts-json.ts');
+    const configPath = join(testDir, 'braseh-json.ts');
     await writeFile(
       configPath,
       `
@@ -83,7 +83,7 @@ export default () => {
     `,
     );
 
-    const result = await dottsCheck(configPath, { json: true });
+    const result = await brasehCheck(configPath, { json: true });
     expect(result).toEqual({
       command: 'check',
       config: 'functional-config',

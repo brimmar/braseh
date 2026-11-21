@@ -191,8 +191,8 @@ export function remoteFile(path: string, props: RemoteFileProps): ResourceHandle
  * @param props Destination path plus optional branch, depth, and sparse paths.
  * @example
  * ```ts
- * git('https://github.com/brimmar/dotTS.git', {
- *   dest: '/tmp/dotts',
+ * git('https://github.com/brimmar/braseh.git', {
+ *   dest: '/tmp/braseh',
  *   depth: 1,
  * });
  * ```
@@ -209,7 +209,7 @@ export function git(url: string, props: GitProps): ResourceHandle {
  * @param props Optional regexp match, `present`/`absent` state, and shared options.
  * @example
  * ```ts
- * lineInFile('~/.bashrc', 'export DOTTS_MANAGED=1');
+ * lineInFile('~/.bashrc', 'export BRASEH_MANAGED=1');
  * ```
  */
 export function lineInFile(path: string, line: string, props: LineInFileProps = {}): ResourceHandle {
@@ -299,7 +299,7 @@ export function unarchive(id: string, props: UnarchiveProps): ResourceHandle {
 
 /**
  * Returns a token that stands in for a named secret in file templates.
- * @param name Secret name stored by `dotts secrets`.
+ * @param name Secret name stored by `braseh secrets`.
  * @example
  * ```ts
  * file('~/.npmrc', { content: secret('NPM_TOKEN') });

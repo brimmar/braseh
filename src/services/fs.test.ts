@@ -8,7 +8,7 @@ import { FileSystem, FileSystemLive } from './fs';
 import { SystemCommand, SystemCommandLive, buildSudoArgs } from './exec';
 
 describe('FileSystem Service', () => {
-  const testDir = join(tmpdir(), 'dotts-fs-test-' + Math.random().toString(36).slice(2));
+  const testDir = join(tmpdir(), 'braseh-fs-test-' + Math.random().toString(36).slice(2));
 
   it('should write and read a file', async () => {
     const program = Effect.gen(function* (_) {
@@ -394,7 +394,7 @@ describe('FileSystem Service', () => {
       throw new Error('expected install of a temp path');
     }
     expect(calls[0]?.args).toEqual(['-m', '644', '--', seenTemp, filePath]);
-    expect(seenTemp.startsWith(join(tmpdir(), 'dotts-'))).toBe(true);
+    expect(seenTemp.startsWith(join(tmpdir(), 'braseh-'))).toBe(true);
     expect(basename(seenTemp)).toBe('file');
     expect(existsSync(seenTemp)).toBe(false);
     expect(existsSync(dirname(seenTemp))).toBe(false);
@@ -440,7 +440,7 @@ describe('FileSystem Service', () => {
       throw new Error('expected install of a temp path');
     }
     expect(calls[0]?.args).toEqual(['-m', '644', '--', seenTemp, filePath]);
-    expect(seenTemp.startsWith(join(tmpdir(), 'dotts-'))).toBe(true);
+    expect(seenTemp.startsWith(join(tmpdir(), 'braseh-'))).toBe(true);
     expect(basename(seenTemp)).toBe('file');
     expect(existsSync(seenTemp)).toBe(false);
     expect(existsSync(dirname(seenTemp))).toBe(false);
@@ -488,7 +488,7 @@ describe('FileSystem Service', () => {
       args: ['--', 'chown', 'alice:', '--', filePath],
     });
     expect(calls).toHaveLength(2);
-    expect(temp.startsWith(join(tmpdir(), 'dotts-'))).toBe(true);
+    expect(temp.startsWith(join(tmpdir(), 'braseh-'))).toBe(true);
     expect(basename(temp)).toBe('file');
     expect(existsSync(temp)).toBe(false);
     expect(existsSync(dirname(temp))).toBe(false);

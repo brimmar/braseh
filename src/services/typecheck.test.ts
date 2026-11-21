@@ -6,14 +6,14 @@ import { join, resolve } from 'node:path';
 import { ensureEmbeddedTypes, typecheckFile } from './typecheck';
 
 describe('typecheckFile', () => {
-  const dir = join(tmpdir(), `dotts-typecheck-${Math.random().toString(36).slice(2)}`);
+  const dir = join(tmpdir(), `braseh-typecheck-${Math.random().toString(36).slice(2)}`);
 
   afterEach(async () => {
     await rm(dir, { recursive: true, force: true });
   });
 
   async function writeFixtureTypes(): Promise<string> {
-    const typesDir = join(dir, '.dotts', 'types');
+    const typesDir = join(dir, '.braseh', 'types');
     await mkdir(typesDir, { recursive: true });
     await writeFile(join(typesDir, 'index.d.ts'), 'export declare function pkg(name: string): { id: string };\n');
     return typesDir;
@@ -21,10 +21,10 @@ describe('typecheckFile', () => {
 
   it('returns [] for a valid config', async () => {
     const typesDir = await writeFixtureTypes();
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await writeFile(
       configPath,
-      `import { pkg } from 'dotts';\nexport default () => {\n  pkg('git');\n};\n`,
+      `import { pkg } from 'braseh';\nexport default () => {\n  pkg('git');\n};\n`,
     );
 
     expect(typecheckFile({ configPath, typesDir })).toEqual([]);
@@ -32,10 +32,10 @@ describe('typecheckFile', () => {
 
   it('reports pkg(1) with a line > 0', async () => {
     const typesDir = await writeFixtureTypes();
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await writeFile(
       configPath,
-      `import { pkg } from 'dotts';\nexport default () => {\n  pkg(1);\n};\n`,
+      `import { pkg } from 'braseh';\nexport default () => {\n  pkg(1);\n};\n`,
     );
 
     const diagnostics = typecheckFile({ configPath, typesDir });
@@ -53,11 +53,11 @@ describe('typecheckFile', () => {
 
   it('accepts node:fs when Node types are available', async () => {
     const typesDir = await writeFixtureTypes();
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await writeFile(
       configPath,
       `import { readFileSync } from 'node:fs';
-import { pkg } from 'dotts';
+import { pkg } from 'braseh';
 export default () => {
   pkg('git');
   readFileSync('/etc/os-release', 'utf8');
@@ -71,11 +71,11 @@ export default () => {
   it('accepts node:fs and fetch using only embedded typeRoots', async () => {
     const typesDir = await writeFixtureTypes();
     const embedded = resolve(join(import.meta.dir, '../embedded/types'));
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await writeFile(
       configPath,
       `import { readFileSync } from 'node:fs';
-import { pkg } from 'dotts';
+import { pkg } from 'braseh';
 export default () => {
   pkg('git');
   readFileSync('/etc/os-release', 'utf8');
@@ -104,11 +104,11 @@ export default () => {
     expect(existsSync(join(extracted, 'undici-types', 'index.d.ts'))).toBe(true);
     expect(readFileSync(join(extracted, 'node', 'index.d.ts'), 'utf8')).not.toBe('partial');
 
-    const configPath = join(dir, 'dotts-extract.ts');
+    const configPath = join(dir, 'braseh-extract.ts');
     await writeFile(
       configPath,
       `import { readFileSync } from 'node:fs';
-import { pkg } from 'dotts';
+import { pkg } from 'braseh';
 export default () => {
   pkg('git');
   readFileSync('/etc/os-release', 'utf8');
@@ -126,10 +126,10 @@ export default () => {
     await mkdir(sharedDir, { recursive: true });
     await mkdir(projectDir, { recursive: true });
     await writeFile(join(sharedDir, 'helper.ts'), 'export const n: number = "nope";\n');
-    const configPath = join(projectDir, 'dotts.ts');
+    const configPath = join(projectDir, 'braseh.ts');
     await writeFile(
       configPath,
-      `import { pkg } from 'dotts';
+      `import { pkg } from 'braseh';
 import { n } from '../shared/helper';
 export default () => {
   pkg('git');
@@ -145,7 +145,7 @@ export default () => {
   });
 
   it('does not fail on suggestion-only diagnostics', async () => {
-    const typesDir = join(dir, '.dotts', 'types');
+    const typesDir = join(dir, '.braseh', 'types');
     await mkdir(typesDir, { recursive: true });
     await writeFile(
       join(typesDir, 'index.d.ts'),
@@ -153,10 +153,10 @@ export default () => {
 export declare function pkg(name: string): { id: string };
 `,
     );
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await writeFile(
       configPath,
-      `import { pkg } from 'dotts';
+      `import { pkg } from 'braseh';
 export default () => {
   pkg('git');
 };
@@ -168,12 +168,12 @@ export default () => {
 
   it('tells the user to run prepare when types are missing', async () => {
     await mkdir(dir, { recursive: true });
-    const configPath = join(dir, 'dotts.ts');
-    await writeFile(configPath, `import { pkg } from 'dotts';\n`);
+    const configPath = join(dir, 'braseh.ts');
+    await writeFile(configPath, `import { pkg } from 'braseh';\n`);
 
     const diagnostics = typecheckFile({
       configPath,
-      typesDir: join(dir, '.dotts', 'types'),
+      typesDir: join(dir, '.braseh', 'types'),
     });
     expect(diagnostics.length).toBeGreaterThanOrEqual(1);
     expect(diagnostics.some((d) => d.message.toLowerCase().includes('prepare'))).toBe(true);

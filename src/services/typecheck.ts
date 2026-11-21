@@ -35,7 +35,7 @@ export function ensureEmbeddedTypes(
 ): string {
   if (existsSync(join(fromSource, 'node', 'index.d.ts'))) return fromSource;
 
-  const dest = join(tmpdir(), `dotts-embedded-types-${embeddedTypesStamp}`);
+  const dest = join(tmpdir(), `braseh-embedded-types-${embeddedTypesStamp}`);
   if (existsSync(join(dest, '.complete'))) return dest;
 
   const staging = `${dest}.${process.pid}.tmp`;
@@ -79,7 +79,7 @@ export function typecheckFile(opts: {
         file: opts.configPath,
         line: 1,
         column: 1,
-        message: 'Missing .dotts/types. Run `dotts prepare` or `dotts init` first.',
+        message: 'Missing .braseh/types. Run `braseh prepare` or `braseh init` first.',
         code: 0,
       },
     ];
@@ -91,7 +91,7 @@ export function typecheckFile(opts: {
     .map((root) => join(root, 'undici-types'))
     .find((dir) => existsSync(join(dir, 'index.d.ts')));
 
-  const paths: ts.MapLike<string[]> = { dotts: [opts.typesDir] };
+  const paths: ts.MapLike<string[]> = { braseh: [opts.typesDir] };
   if (undiciRoot) {
     paths['undici-types'] = [undiciRoot];
   }

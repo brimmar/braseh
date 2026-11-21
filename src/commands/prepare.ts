@@ -1,7 +1,7 @@
 import { exists, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import ts from '@typescript/typescript6';
-import { DottsError } from '../core/errors';
+import { BrasehError } from '../core/errors';
 import { CLI_VERSION } from '../version';
 
 // Bun embeds this asset in `bun build --compile`. dist/public.d.ts is not a
@@ -20,7 +20,7 @@ const TSCONFIG = {
     noEmit: true,
     skipLibCheck: true,
     paths: {
-      dotts: ['./.dotts/types'],
+      braseh: ['./.braseh/types'],
     },
   },
   include: ['./*.ts'],
@@ -30,7 +30,7 @@ export function tsconfigJson(): string {
   return `${JSON.stringify(TSCONFIG, null, 2)}\n`;
 }
 
-async function ensureDottsPath(tsconfigPath: string): Promise<void> {
+async function ensureBrasehPath(tsconfigPath: string): Promise<void> {
   if (!(await exists(tsconfigPath))) {
     await writeFile(tsconfigPath, tsconfigJson());
     return;
@@ -44,9 +44,9 @@ async function ensureDottsPath(tsconfigPath: string): Promise<void> {
     typeof config !== 'object' ||
     Array.isArray(config)
   ) {
-    throw new DottsError(
+    throw new BrasehError(
       `Could not parse ${tsconfigPath}`,
-      'Fix the JSON/JSONC, or add compilerOptions.paths.dotts manually.',
+      'Fix the JSON/JSONC, or add compilerOptions.paths.braseh manually.',
     );
   }
   const json = config as {
@@ -54,14 +54,14 @@ async function ensureDottsPath(tsconfigPath: string): Promise<void> {
   };
   json.compilerOptions ??= {};
   json.compilerOptions.paths ??= {};
-  if (!json.compilerOptions.paths.dotts) {
-    json.compilerOptions.paths.dotts = ['./.dotts/types'];
+  if (!json.compilerOptions.paths.braseh) {
+    json.compilerOptions.paths.braseh = ['./.braseh/types'];
     await writeFile(tsconfigPath, `${JSON.stringify(json, null, 2)}\n`);
   }
 }
 
 async function writeEditorTypes(projectDir: string): Promise<void> {
-  const typesDir = join(projectDir, '.dotts', 'types');
+  const typesDir = join(projectDir, '.braseh', 'types');
   await rm(typesDir, { recursive: true, force: true });
   await mkdir(typesDir, { recursive: true });
 
@@ -70,12 +70,12 @@ async function writeEditorTypes(projectDir: string): Promise<void> {
 
   await writeFile(
     join(typesDir, 'package.json'),
-    `${JSON.stringify({ name: 'dotts', version: CLI_VERSION, types: 'index.d.ts' }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'braseh', version: CLI_VERSION, types: 'index.d.ts' }, null, 2)}\n`,
   );
 }
 
-export async function dottsPrepare(projectDir: string = process.cwd()): Promise<void> {
+export async function brasehPrepare(projectDir: string = process.cwd()): Promise<void> {
   await mkdir(projectDir, { recursive: true });
-  await ensureDottsPath(join(projectDir, 'tsconfig.json'));
+  await ensureBrasehPath(join(projectDir, 'tsconfig.json'));
   await writeEditorTypes(projectDir);
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs INSIDE the container after dotts apply.
+# Runs INSIDE the container after braseh apply.
 # Asserts all expected side effects occurred.
 set -euo pipefail
 
@@ -20,7 +20,7 @@ check() {
 
 echo ""
 echo "══════════════════════════════════════"
-echo "  dotts E2E Verification"
+echo "  braseh E2E Verification"
 echo "══════════════════════════════════════"
 echo ""
 
@@ -43,28 +43,28 @@ check "config.json has correct mode"  "test \$(stat -c '%a' $HOME/.config/myapp/
 echo ""
 echo "── Symlinks ─────────────────────────"
 check "~/.config/myapp/settings.json is a symlink"   "test -L $HOME/.config/myapp/settings.json"
-check "symlink resolves correctly"    "grep -q 'dotts' $HOME/.config/myapp/settings.json"
+check "symlink resolves correctly"    "grep -q 'braseh' $HOME/.config/myapp/settings.json"
 
 echo ""
 echo "── lineInFile ───────────────────────"
-check "DOTTS_MANAGED=1 in ~/.bashrc"  "grep -q 'DOTTS_MANAGED=1' $HOME/.bashrc"
+check "BRASEH_MANAGED=1 in ~/.bashrc"  "grep -q 'BRASEH_MANAGED=1' $HOME/.bashrc"
 check "PATH line in ~/.bashrc"        "grep -q '.local/bin' $HOME/.bashrc"
 
 echo ""
 echo "── Scripts ──────────────────────────"
-check "jq version file created"       "test -f /tmp/dotts-jq-version.txt"
-check "tree version file created"     "test -f /tmp/dotts-tree-version.txt"
+check "jq version file created"       "test -f /tmp/braseh-jq-version.txt"
+check "tree version file created"     "test -f /tmp/braseh-tree-version.txt"
 
 echo ""
 echo "── Platform guards ──────────────────"
-check "linux/ubuntu guard ran"        "test -f /tmp/dotts-distro-check.txt"
-check "darwin guard did NOT run"      "! test -f /tmp/dotts-darwin-error.txt"
+check "linux/ubuntu guard ran"        "test -f /tmp/braseh-distro-check.txt"
+check "darwin guard did NOT run"      "! test -f /tmp/braseh-darwin-error.txt"
 
 echo ""
 echo "── Idempotency ──────────────────────"
 echo "  (re-running apply — should be a no-op)"
-dotts apply /home/testuser/dotts.ts
-check "DOTTS_MANAGED not duplicated"  "test \$(grep -c 'DOTTS_MANAGED' $HOME/.bashrc) -eq 1"
+braseh apply /home/testuser/basic.ts
+check "BRASEH_MANAGED not duplicated"  "test \$(grep -c 'BRASEH_MANAGED' $HOME/.bashrc) -eq 1"
 
 echo ""
 echo "══════════════════════════════════════"

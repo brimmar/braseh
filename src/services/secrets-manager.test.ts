@@ -46,10 +46,10 @@ describe("SecretManager Service", () => {
   it("should set and get a secret", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-test-" + Math.random().toString(36).slice(2),
+      "braseh-sm-test-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/secrets.json");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/secrets.json");
+    const masterKeyFile = join(testDir, ".braseh_key");
 
     const program = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);
@@ -71,10 +71,10 @@ describe("SecretManager Service", () => {
   it("should chmod the master key and secrets file to 0o600 after set", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-mode-" + Math.random().toString(36).slice(2),
+      "braseh-sm-mode-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/secrets.json");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/secrets.json");
+    const masterKeyFile = join(testDir, ".braseh_key");
 
     const program = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);
@@ -95,17 +95,17 @@ describe("SecretManager Service", () => {
   it("should decrypt a legacy blob, rewrite it, and decrypt the rewrite with the new key only", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-migrate-" + Math.random().toString(36).slice(2),
+      "braseh-sm-migrate-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/secrets.json");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/secrets.json");
+    const masterKeyFile = join(testDir, ".braseh_key");
     const hexKey = hexMasterKey();
     const original = "legacy-secret-value";
     const legacyBlob = encryptWithLegacy(original, hexKey);
 
     expect(() => decryptNew(legacyBlob, hexKey)).toThrow();
 
-    await mkdir(join(testDir, ".dotts"), { recursive: true });
+    await mkdir(join(testDir, ".braseh"), { recursive: true });
     await writeFile(masterKeyFile, hexKey);
     await writeFile(
       secretsFile,
@@ -125,7 +125,7 @@ describe("SecretManager Service", () => {
     expect(result.second).toBe(original);
 
     const onDisk = await readFile(secretsFile, "utf8");
-    expect(onDisk.startsWith("$DOTTS_VAULT;1.0;AES-256-GCM")).toBe(true);
+    expect(onDisk.startsWith("$BRASEH_VAULT;1.0;AES-256-GCM")).toBe(true);
     expect(onDisk).not.toContain(original);
     expect(onDisk).not.toContain("LEGACY");
 
@@ -142,15 +142,15 @@ describe("SecretManager Service", () => {
   it("does not let a corrupt secret block listing or getting another", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-corrupt-" + Math.random().toString(36).slice(2),
+      "braseh-sm-corrupt-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/secrets.json");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/secrets.json");
+    const masterKeyFile = join(testDir, ".braseh_key");
     const hexKey = hexMasterKey();
     const goodBlob = encryptWithNew("good-value", hexKey);
     const corruptBlob = "not-a-valid-secret-blob";
 
-    await mkdir(join(testDir, ".dotts"), { recursive: true });
+    await mkdir(join(testDir, ".braseh"), { recursive: true });
     await writeFile(masterKeyFile, hexKey);
     await writeFile(
       secretsFile,
@@ -195,10 +195,10 @@ describe("SecretManager Service", () => {
   it("writes master key and secrets file as 0o600 immediately after writeFile", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-write-mode-" + Math.random().toString(36).slice(2),
+      "braseh-sm-write-mode-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/secrets.json");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/secrets.json");
+    const masterKeyFile = join(testDir, ".braseh_key");
     const modesAtWrite: number[] = [];
 
     const TrackingFS = Layer.succeed(
@@ -281,10 +281,10 @@ describe("SecretManager Service", () => {
   it("stores secrets in whole-file encrypted vault and reveals no key names or values on disk", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-vault-opaque-" + Math.random().toString(36).slice(2),
+      "braseh-sm-vault-opaque-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/vault");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/vault");
+    const masterKeyFile = join(testDir, ".braseh_key");
 
     const program = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);
@@ -307,7 +307,7 @@ describe("SecretManager Service", () => {
     expect(result.dbPass).toBe("db-password-67890");
 
     const fileContent = await readFile(secretsFile, "utf8");
-    expect(fileContent.startsWith("$DOTTS_VAULT;1.0;AES-256-GCM")).toBe(true);
+    expect(fileContent.startsWith("$BRASEH_VAULT;1.0;AES-256-GCM")).toBe(true);
     expect(fileContent).not.toContain("MY_SUPER_SECRET_TOKEN");
     expect(fileContent).not.toContain("DATABASE_PASSWORD");
     expect(fileContent).not.toContain("super-secret-value-12345");
@@ -321,13 +321,13 @@ describe("SecretManager Service", () => {
   it("resolves sibling vault files in preference order (vault, secrets.vault, secrets.json)", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-resolve-" + Math.random().toString(36).slice(2),
+      "braseh-sm-resolve-" + Math.random().toString(36).slice(2),
     );
-    const dottsDir = join(testDir, ".dotts");
-    await mkdir(dottsDir, { recursive: true });
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const brasehDir = join(testDir, ".braseh");
+    await mkdir(brasehDir, { recursive: true });
+    const masterKeyFile = join(testDir, ".braseh_key");
 
-    const legacyPath = join(dottsDir, "secrets.json");
+    const legacyPath = join(brasehDir, "secrets.json");
     const program1 = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);
       yield* _(sm.setPaths({ secretsFile: legacyPath, masterKeyFile }));
@@ -338,7 +338,7 @@ describe("SecretManager Service", () => {
     const program2 = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);
       yield* _(
-        sm.setPaths({ secretsFile: join(dottsDir, "vault"), masterKeyFile }),
+        sm.setPaths({ secretsFile: join(brasehDir, "vault"), masterKeyFile }),
       );
       return yield* _(sm.get("FALLBACK_SECRET"));
     });
@@ -351,10 +351,10 @@ describe("SecretManager Service", () => {
   it("removes secrets and saves the updated whole-file vault", async () => {
     const testDir = join(
       tmpdir(),
-      "dotts-sm-remove-" + Math.random().toString(36).slice(2),
+      "braseh-sm-remove-" + Math.random().toString(36).slice(2),
     );
-    const secretsFile = join(testDir, ".dotts/vault");
-    const masterKeyFile = join(testDir, ".dotts_key");
+    const secretsFile = join(testDir, ".braseh/vault");
+    const masterKeyFile = join(testDir, ".braseh_key");
 
     const program = Effect.gen(function* (_) {
       const sm = yield* _(SecretManager);

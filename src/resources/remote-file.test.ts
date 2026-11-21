@@ -193,7 +193,7 @@ describe('RemoteFileResource', () => {
   });
 
   it('should not recursively delete a directory on destroy', async () => {
-    const testDir = join(tmpdir(), 'dotts-remote-dir-destroy-' + Math.random().toString(36).slice(2));
+    const testDir = join(tmpdir(), 'braseh-remote-dir-destroy-' + Math.random().toString(36).slice(2));
     const dirPath = join(testDir, 'was-a-file');
     await mkdir(dirPath, { recursive: true });
     const keep = join(dirPath, 'keep.txt');
@@ -214,7 +214,7 @@ describe('RemoteFileResource', () => {
   });
 
   it('should succeed destroy when the file is already gone', async () => {
-    const testDir = join(tmpdir(), 'dotts-remote-missing-destroy-' + Math.random().toString(36).slice(2));
+    const testDir = join(tmpdir(), 'braseh-remote-missing-destroy-' + Math.random().toString(36).slice(2));
     await mkdir(testDir, { recursive: true });
     const path = join(testDir, 'gone.txt');
 

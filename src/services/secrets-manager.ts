@@ -39,8 +39,8 @@ export const SecretManagerLive = Layer.effect(
     const store = yield* SecretStore;
 
     let customMasterKeyFile = false;
-    let configuredSecretsFile = join(process.cwd(), ".dotts/vault");
-    let masterKeyFile = join(homedir(), ".dotts_key");
+    let configuredSecretsFile = join(process.cwd(), ".braseh/vault");
+    let masterKeyFile = join(homedir(), ".braseh_key");
 
     const resolveSecretsPath = () =>
       Effect.gen(function* () {
@@ -61,7 +61,7 @@ export const SecretManagerLive = Layer.effect(
         let current = dirname(dir);
         while (current && current !== dirname(current)) {
           for (const candidate of ["vault", "secrets.vault", "secrets.json"]) {
-            const candidatePath = join(current, ".dotts", candidate);
+            const candidatePath = join(current, ".braseh", candidate);
             if (yield* fs.exists(candidatePath)) {
               return candidatePath;
             }
@@ -73,15 +73,15 @@ export const SecretManagerLive = Layer.effect(
 
     const getMasterKey = (targetFile: string) =>
       Effect.gen(function* () {
-        if (process.env.DOTTS_KEY) {
-          return process.env.DOTTS_KEY.trim();
+        if (process.env.BRASEH_KEY) {
+          return process.env.BRASEH_KEY.trim();
         }
         let keyFile = masterKeyFile;
         let exists = yield* fs.exists(keyFile);
         if (!exists && !customMasterKeyFile) {
           const keyCandidates = [
-            join(homedir(), ".dotts_key"),
-            join(homedir(), ".dotts-key"),
+            join(homedir(), ".braseh_key"),
+            join(homedir(), ".braseh-key"),
             join(homedir(), ".vault-pass"),
             join(homedir(), ".vault_pass"),
           ];
@@ -100,7 +100,7 @@ export const SecretManagerLive = Layer.effect(
             if (content.length > 0) {
               return yield* Effect.fail(
                 new Error(
-                  `Master key file not found at ${masterKeyFile} (or ~/.vault-pass, ~/.vault_pass). Set DOTTS_KEY environment variable or create ${masterKeyFile} to decrypt secrets.`,
+                  `Master key file not found at ${masterKeyFile} (or ~/.vault-pass, ~/.vault_pass). Set BRASEH_KEY environment variable or create ${masterKeyFile} to decrypt secrets.`,
                 ),
               );
             }

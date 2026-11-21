@@ -1,7 +1,7 @@
 {
-  "name": "dotts",
+  "name": "braseh",
   "version": "0.2.24",
-  "description": "Declarative dotfiles management with TypeScript — like AWS CDK for your system",
+  "description": "Declarative dotfiles for one machine, in TypeScript.",
   "type": "module",
   "main": "./dist/public.js",
   "types": "./dist/public.d.ts",
@@ -15,7 +15,7 @@
     "dist"
   ],
   "bin": {
-    "dotts": "./src/index.ts"
+    "braseh": "./src/index.ts"
   },
   "scripts": {
     "start": "bun src/index.ts",
@@ -24,7 +24,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "type-check": "tsc --noEmit",
-    "build": "bun build ./src/index.ts --compile --outfile dotts",
+    "build": "bun build ./src/index.ts --compile --outfile braseh",
     "build:npm": "rm -rf dist && bun run build:npm:types && bun run build:npm:js",
     "build:npm:types": "tsc --project tsconfig.npm.json",
     "build:npm:js": "bun build ./src/public.ts --outdir dist --target bun --format esm --external effect --external zod --external mustache --external picocolors --external '@clack/prompts'",
@@ -36,18 +36,18 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/brimmar/dotTS.git"
+    "url": "git+https://github.com/brimmar/braseh.git"
   },
-  "homepage": "https://github.com/brimmar/dotTS#readme",
+  "homepage": "https://github.com/brimmar/braseh#readme",
   "bugs": {
-    "url": "https://github.com/brimmar/dotTS/issues"
+    "url": "https://github.com/brimmar/braseh/issues"
   },
   "publishConfig": {
     "access": "public"
   },
   "keywords": [
     "dotfiles",
-    "dotts",
+    "braseh",
     "configuration",
     "declarative",
     "typescript",

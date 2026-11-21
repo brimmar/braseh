@@ -33,7 +33,7 @@ function publicPropsTypes(src: string): string {
 }
 
 export async function generatePublicApiDts(): Promise<string> {
-  const outDir = await mkdtemp(join(tmpdir(), 'dotts-public-api-dts-'));
+  const outDir = await mkdtemp(join(tmpdir(), 'braseh-public-api-dts-'));
   try {
     const tsc = join(root, 'node_modules/typescript/bin/tsc');
     const proc = Bun.spawn(['bun', tsc, '--project', 'tsconfig.npm.json', '--outDir', outDir], {

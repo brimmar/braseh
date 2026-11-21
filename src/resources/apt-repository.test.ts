@@ -62,7 +62,7 @@ describe('AptRepositoryResource', () => {
     );
 
     expect(files['/etc/apt/sources.list.d/docker.list']).toContain('[signed-by=/etc/apt/keyrings/docker.gpg]');
-    expect(commands).toContain('gpg --dearmor --output /etc/apt/keyrings/docker.gpg /tmp/dotts-docker.key');
+    expect(commands).toContain('gpg --dearmor --output /etc/apt/keyrings/docker.gpg /tmp/braseh-docker.key');
     expect(commands.some((c) => c.startsWith('apt-get update'))).toBe(true);
   });
 
@@ -169,7 +169,7 @@ describe('AptRepositoryResource', () => {
       ),
     );
 
-    expect(commands).toContain('cp /tmp/dotts-github-cli.key /etc/apt/keyrings/github-cli.gpg');
+    expect(commands).toContain('cp /tmp/braseh-github-cli.key /etc/apt/keyrings/github-cli.gpg');
     expect(commands.some((c) => c.includes('gpg --dearmor'))).toBe(false);
   });
 

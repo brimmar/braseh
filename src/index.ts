@@ -2,16 +2,16 @@ import { join } from "node:path";
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { parseArgv } from "./cli-parse";
-import { dottsApply } from "./commands/apply";
-import { dottsCheck } from "./commands/check";
-import { dottsDoctor } from "./commands/doctor";
-import { dottsInit } from "./commands/init";
-import { dottsPrepare } from "./commands/prepare";
+import { brasehApply } from "./commands/apply";
+import { brasehCheck } from "./commands/check";
+import { brasehDoctor } from "./commands/doctor";
+import { brasehInit } from "./commands/init";
+import { brasehPrepare } from "./commands/prepare";
 import {
-  dottsSecretGet,
-  dottsSecretList,
-  dottsSecretRemove,
-  dottsSecretSet,
+  brasehSecretGet,
+  brasehSecretList,
+  brasehSecretRemove,
+  brasehSecretSet,
 } from "./commands/secrets";
 import { formatError } from "./core/errors";
 import { getHelpText } from "./help";
@@ -42,30 +42,30 @@ async function main() {
 
       if (request.kind === "init") {
         p.log.step(`Initializing project at ${request.projectDir}...`);
-        await dottsInit(request.projectDir, { force: request.force });
+        await brasehInit(request.projectDir, { force: request.force });
         p.log.success("Project initialized successfully!");
         p.note(
-          `Project created at ${request.projectDir}\nEdit ${join(request.projectDir, "dotts.ts")} to get started.`,
+          `Project created at ${request.projectDir}\nEdit ${join(request.projectDir, "braseh.ts")} to get started.`,
           "next steps",
         );
       } else if (request.kind === "prepare") {
         p.log.step(`Preparing editor types at ${request.dir}...`);
-        await dottsPrepare(request.dir);
+        await brasehPrepare(request.dir);
         p.log.success("Editor types prepared.");
       } else if (request.kind === "check") {
-        const result = await dottsCheck(request.configPath, {
+        const result = await brasehCheck(request.configPath, {
           json: request.json,
         });
         if (request.json) {
           process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         }
       } else if (request.kind === "doctor") {
-        const result = await dottsDoctor({ json: request.json });
+        const result = await brasehDoctor({ json: request.json });
         if (request.json) {
           process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         }
       } else if (request.kind === "apply") {
-        const result = await dottsApply(request.configPath, {
+        const result = await brasehApply(request.configPath, {
           dryRun: request.dryRun,
           yes: request.yes,
           verbose: request.verbose,
@@ -75,16 +75,16 @@ async function main() {
           process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         }
       } else if (request.kind === "secrets-get") {
-        await dottsSecretGet(request.name);
+        await brasehSecretGet(request.name);
       } else if (request.kind === "secrets-set") {
-        await dottsSecretSet(request.name, request.value);
+        await brasehSecretSet(request.name, request.value);
       } else if (request.kind === "secrets-list") {
-        const result = await dottsSecretList({ json: request.json });
+        const result = await brasehSecretList({ json: request.json });
         if (request.json) {
           process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         }
       } else if (request.kind === "secrets-remove") {
-        await dottsSecretRemove(request.name);
+        await brasehSecretRemove(request.name);
       }
     } catch (error) {
       const isJson = args.includes("--json");
@@ -115,21 +115,21 @@ async function main() {
     return;
   }
 
-  p.intro(pc.cyan(" dotts "));
+  p.intro(pc.cyan(" braseh "));
 
   const command = await p.select({
     message: "What would you like to do?",
     options: [
-      { value: "init", label: "Initialize a new project", hint: "dotts init" },
+      { value: "init", label: "Initialize a new project", hint: "braseh init" },
       {
         value: "prepare",
         label: "Prepare editor types",
-        hint: "dotts prepare",
+        hint: "braseh prepare",
       },
-      { value: "check", label: "Check configuration", hint: "dotts check" },
-      { value: "doctor", label: "System Diagnostics", hint: "dotts doctor" },
-      { value: "apply", label: "Apply configuration", hint: "dotts apply" },
-      { value: "secrets", label: "Manage secrets", hint: "dotts secrets" },
+      { value: "check", label: "Check configuration", hint: "braseh check" },
+      { value: "doctor", label: "System Diagnostics", hint: "braseh doctor" },
+      { value: "apply", label: "Apply configuration", hint: "braseh apply" },
+      { value: "secrets", label: "Manage secrets", hint: "braseh secrets" },
       { value: "exit", label: "Exit" },
     ],
   });
@@ -154,19 +154,19 @@ async function main() {
 
       const s = p.spinner();
       s.start("Initializing project...");
-      await dottsInit(projectDir);
+      await brasehInit(projectDir);
       s.stop("Project initialized successfully!");
       p.note(
-        `Project created at ${projectDir}\nEdit ${join(projectDir, "dotts.ts")} to get started.`,
+        `Project created at ${projectDir}\nEdit ${join(projectDir, "braseh.ts")} to get started.`,
         "next steps",
       );
     } else if (command === "prepare") {
-      await dottsPrepare();
+      await brasehPrepare();
     } else if (command === "check") {
       const configPath = await p.text({
-        message: "Path to dotts.ts?",
-        placeholder: "./dotts.ts",
-        defaultValue: "./dotts.ts",
+        message: "Path to braseh.ts?",
+        placeholder: "./braseh.ts",
+        defaultValue: "./braseh.ts",
       });
 
       if (p.isCancel(configPath)) {
@@ -174,14 +174,14 @@ async function main() {
         process.exit(0);
       }
 
-      await dottsCheck(configPath);
+      await brasehCheck(configPath);
     } else if (command === "doctor") {
-      await dottsDoctor();
+      await brasehDoctor();
     } else if (command === "apply") {
       const configPath = await p.text({
-        message: "Path to dotts.ts?",
-        placeholder: "./dotts.ts",
-        defaultValue: "./dotts.ts",
+        message: "Path to braseh.ts?",
+        placeholder: "./braseh.ts",
+        defaultValue: "./braseh.ts",
       });
 
       if (p.isCancel(configPath)) {
@@ -200,7 +200,7 @@ async function main() {
         process.exit(0);
       }
 
-      await dottsApply(configPath, { dryRun: dryRun as boolean });
+      await brasehApply(configPath, { dryRun: dryRun as boolean });
     } else if (command === "secrets") {
       const secretAction = await p.select({
         message: "Secret management:",
@@ -222,7 +222,7 @@ async function main() {
           message: "Secret name (e.g. GITHUB_TOKEN):",
         });
         if (p.isCancel(name) || !name) return;
-        await dottsSecretGet(name);
+        await brasehSecretGet(name);
       } else if (secretAction === "set") {
         const name = await p.text({
           message: "Secret name (e.g. GITHUB_TOKEN):",
@@ -232,13 +232,13 @@ async function main() {
         const value = await p.password({ message: "Secret value:" });
         if (p.isCancel(value) || !value) return;
 
-        await dottsSecretSet(name, value);
+        await brasehSecretSet(name, value);
       } else if (secretAction === "list") {
-        await dottsSecretList();
+        await brasehSecretList();
       } else if (secretAction === "remove") {
         const name = await p.text({ message: "Secret name to remove:" });
         if (p.isCancel(name) || !name) return;
-        await dottsSecretRemove(name);
+        await brasehSecretRemove(name);
       }
     }
   } catch (error) {

@@ -83,7 +83,7 @@ export class AptRepositoryResource extends Resource {
             }
             yield* fs.mkdir('/etc/apt/keyrings', { become });
             // Download key as raw bytes to prevent UTF-8 corruption of binary OpenPGP keyrings
-            const tempKeyPath = `/tmp/dotts-${name}.key`;
+            const tempKeyPath = `/tmp/braseh-${name}.key`;
             const keyBytes = yield* http.downloadBytes(key);
             yield* fs.writeFileBytes(tempKeyPath, keyBytes);
 

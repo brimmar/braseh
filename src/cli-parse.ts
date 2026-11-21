@@ -120,7 +120,7 @@ export function parseArgv(argv: string[]): CliRequest {
     const { positional, flags } = takeArgs(argv.slice(1), ["--json"]);
     return {
       kind: "check",
-      configPath: positional || "./dotts.ts",
+      configPath: positional || "./braseh.ts",
       ...(flags.has("--json") ? { json: true } : {}),
     };
   }
@@ -147,7 +147,7 @@ export function parseArgv(argv: string[]): CliRequest {
     const json = flags.has("--json");
     return {
       kind: "apply",
-      configPath: positional || "./dotts.ts",
+      configPath: positional || "./braseh.ts",
       dryRun: flags.has("--dry-run"),
       ...(yes ? { yes: true } : {}),
       ...(verbose ? { verbose: true } : {}),
@@ -160,7 +160,7 @@ export function parseArgv(argv: string[]): CliRequest {
     if (action === "get") {
       const name = argv[2];
       if (!name) {
-        throw new Error("Usage: dotts secrets get <name>");
+        throw new Error("Usage: braseh secrets get <name>");
       }
       return { kind: "secrets-get", name };
     }
@@ -168,7 +168,7 @@ export function parseArgv(argv: string[]): CliRequest {
       const name = argv[2];
       const value = argv[3];
       if (!name || !value) {
-        throw new Error("Usage: dotts secrets set <name> <value>");
+        throw new Error("Usage: braseh secrets set <name> <value>");
       }
       return { kind: "secrets-set", name, value };
     }
@@ -182,11 +182,11 @@ export function parseArgv(argv: string[]): CliRequest {
     if (action === "remove") {
       const name = argv[2];
       if (!name) {
-        throw new Error("Usage: dotts secrets remove <name>");
+        throw new Error("Usage: braseh secrets remove <name>");
       }
       return { kind: "secrets-remove", name };
     }
-    throw new Error("Usage: dotts secrets <get|set|list|remove>");
+    throw new Error("Usage: braseh secrets <get|set|list|remove>");
   }
 
   throw new Error(`Unknown command: ${command}`);

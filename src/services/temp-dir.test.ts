@@ -31,7 +31,7 @@ describe('TempDirService', () => {
       Effect.provide(MockFS)
     ));
 
-    expect(result).toContain('dotts-');
+    expect(result).toContain('braseh-');
     expect(createdDir).toBe(result);
     expect(removedDir).toBe(result);
   });

@@ -10,7 +10,7 @@ import { mkdir, rm, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 
 describe('DirectoryResource', () => {
-  const testDir = join(tmpdir(), 'dotts-dir-res-test-' + Math.random().toString(36).slice(2));
+  const testDir = join(tmpdir(), 'braseh-dir-res-test-' + Math.random().toString(36).slice(2));
 
   const MockFS = (state: any) => Layer.succeed(FileSystem, FileSystem.of({
     mkdir: (path: string) => Effect.sync(() => { state.createdDir = path; state.exists = true; }),

@@ -12,18 +12,18 @@ import { ActiveContext } from './context';
 const DEFAULT_EXPORT_ERROR =
   'Configuration file must export a default function: export default () => { ... }';
 
-export const DOTTS_MODULE_HOOK_ERROR =
-  "Could not register the 'dotts' module plugin. import { ... } from 'dotts' cannot be resolved because no module hook is available.";
+export const BRASEH_MODULE_HOOK_ERROR =
+  "Could not register the 'braseh' module plugin. import { ... } from 'braseh' cannot be resolved because no module hook is available.";
 
-type GlobalWithDottsApi = typeof globalThis & {
-  __dotts_public_api__?: typeof publicApi;
+type GlobalWithBrasehApi = typeof globalThis & {
+  __braseh_public_api__?: typeof publicApi;
 };
 
-let dottsPluginInstalled = false;
+let brasehPluginInstalled = false;
 let skipBunPlugin = false;
 
 function bindPublicApi(): void {
-  (globalThis as GlobalWithDottsApi).__dotts_public_api__ = publicApi;
+  (globalThis as GlobalWithBrasehApi).__braseh_public_api__ = publicApi;
 }
 
 function publicApiExportRecord(): Record<string, unknown> {
@@ -38,29 +38,29 @@ function publicApiExportRecord(): Record<string, unknown> {
 function publicApiShimSource(): string {
   const names = Object.keys(publicApi).filter((name) => name !== '__esModule');
   return [
-    'const __api__ = globalThis.__dotts_public_api__;',
+    'const __api__ = globalThis.__braseh_public_api__;',
     ...names.map((name) => `export const ${name} = __api__['${name}'];`),
   ].join('\n');
 }
 
-function tryInstallDottsPlugin(): boolean {
+function tryInstallBrasehPlugin(): boolean {
   if (skipBunPlugin) return false;
-  if (dottsPluginInstalled) return true;
+  if (brasehPluginInstalled) return true;
   if (typeof Bun === 'undefined' || typeof Bun.plugin !== 'function') {
     return false;
   }
 
   try {
     Bun.plugin({
-      name: 'dotts-runtime',
+      name: 'braseh-runtime',
       setup(build) {
-        build.module('dotts', () => ({
+        build.module('braseh', () => ({
           exports: publicApiExportRecord(),
           loader: 'object',
         }));
       },
     });
-    dottsPluginInstalled = true;
+    brasehPluginInstalled = true;
     return true;
   } catch {
     return false;
@@ -75,7 +75,7 @@ async function tryInstallNodeModuleHook(runtimeFile: string): Promise<boolean> {
   try {
     const targetUrl = pathToFileURL(runtimeFile).href;
     const source = `export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'dotts') {
+  if (specifier === 'braseh') {
     return { shortCircuit: true, url: ${JSON.stringify(targetUrl)} };
   }
   return nextResolve(specifier, context);
@@ -94,10 +94,10 @@ async function tryInstallNodeModuleHook(runtimeFile: string): Promise<boolean> {
 }
 
 async function installRuntimeFallback(configDir: string): Promise<() => Promise<void>> {
-  const runtimeDir = join(configDir, '.dotts', 'runtime');
+  const runtimeDir = join(configDir, '.braseh', 'runtime');
   const runtimeFile = join(
     runtimeDir,
-    `dotts-${process.pid}-${randomBytes(8).toString('hex')}.mjs`,
+    `braseh-${process.pid}-${randomBytes(8).toString('hex')}.mjs`,
   );
 
   await mkdir(runtimeDir, { recursive: true });
@@ -105,7 +105,7 @@ async function installRuntimeFallback(configDir: string): Promise<() => Promise<
   try {
     await writeFile(runtimeFile, publicApiShimSource(), 'utf8');
     if (!(await tryInstallNodeModuleHook(runtimeFile))) {
-      throw new Error(DOTTS_MODULE_HOOK_ERROR);
+      throw new Error(BRASEH_MODULE_HOOK_ERROR);
     }
   } catch (error) {
     await rm(runtimeFile, { force: true });
@@ -117,16 +117,16 @@ async function installRuntimeFallback(configDir: string): Promise<() => Promise<
   };
 }
 
-async function prepareDottsSpecifier(configDir: string): Promise<() => Promise<void>> {
-  if (tryInstallDottsPlugin()) {
+async function prepareBrasehSpecifier(configDir: string): Promise<() => Promise<void>> {
+  if (tryInstallBrasehPlugin()) {
     return async () => {};
   }
   return installRuntimeFallback(configDir);
 }
 
-export function resetDottsLoaderForTests(options: { skipPlugin?: boolean } = {}): void {
+export function resetBrasehLoaderForTests(options: { skipPlugin?: boolean } = {}): void {
   skipBunPlugin = options.skipPlugin === true;
-  dottsPluginInstalled = false;
+  brasehPluginInstalled = false;
 }
 
 export async function loadConfig(configPath: string): Promise<{ app: App; config: { name: string } }> {
@@ -139,7 +139,7 @@ export async function loadConfig(configPath: string): Promise<{ app: App; config
   bindPublicApi();
 
   const configDir = dirname(absolutePath);
-  const cleanup = await prepareDottsSpecifier(configDir);
+  const cleanup = await prepareBrasehSpecifier(configDir);
 
   try {
     const module = (await import(absolutePath)) as { default?: unknown };

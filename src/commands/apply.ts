@@ -165,7 +165,7 @@ function dryRunSystemCommand(
   });
 }
 
-export async function dottsApply(
+export async function brasehApply(
   configPath: string,
   options: ApplyOptions = {},
 ): Promise<ApplyResult> {
@@ -197,7 +197,7 @@ export async function dottsApply(
         StateService,
         Effect.gen(function* () {
           const fs = yield* FileSystem;
-          let statePath = join(process.cwd(), ".dotts/state.json");
+          let statePath = join(process.cwd(), ".braseh/state.json");
           return StateService.of({
             setPath: (path) =>
               Effect.sync(() => {
@@ -226,7 +226,7 @@ export async function dottsApply(
     if (remoteRepo.isRemote(configPath)) {
       const url = yield* _(remoteRepo.resolve(configPath));
 
-      const shouldConfirm = !options.yes && process.env.DOTTS_YES !== "1";
+      const shouldConfirm = !options.yes && process.env.BRASEH_YES !== "1";
       if (shouldConfirm) {
         const confirmed = yield* _(
           Effect.promise(() =>
@@ -258,23 +258,23 @@ export async function dottsApply(
               yield* _(remoteRepo.clone(url, dir));
             }
 
-            let finalPath = join(dir, "dotts.ts");
+            let finalPath = join(dir, "braseh.ts");
             if (!existsSync(finalPath)) {
-              if (existsSync(join(dir, "dotts", "dotts.ts"))) {
-                finalPath = join(dir, "dotts", "dotts.ts");
-              } else if (existsSync(join(dir, ".dotts", "dotts.ts"))) {
-                finalPath = join(dir, ".dotts", "dotts.ts");
+              if (existsSync(join(dir, "braseh", "braseh.ts"))) {
+                finalPath = join(dir, "braseh", "braseh.ts");
+              } else if (existsSync(join(dir, ".braseh", "braseh.ts"))) {
+                finalPath = join(dir, ".braseh", "braseh.ts");
               }
             }
 
             const configDir = dirname(finalPath);
-            const vaultCandidate = existsSync(join(dir, ".dotts", "vault"))
-              ? join(dir, ".dotts", "vault")
-              : join(configDir, ".dotts", "vault");
+            const vaultCandidate = existsSync(join(dir, ".braseh", "vault"))
+              ? join(dir, ".braseh", "vault")
+              : join(configDir, ".braseh", "vault");
             yield* _(
               secretManager.setPaths({
                 secretsFile: vaultCandidate,
-                masterKeyFile: join(homedir(), ".dotts_key"),
+                masterKeyFile: join(homedir(), ".braseh_key"),
               }),
             );
 
@@ -329,8 +329,8 @@ export async function dottsApply(
       const configDir = dirname(resolved);
       yield* _(
         secretManager.setPaths({
-          secretsFile: join(configDir, ".dotts", "vault"),
-          masterKeyFile: join(homedir(), ".dotts_key"),
+          secretsFile: join(configDir, ".braseh", "vault"),
+          masterKeyFile: join(homedir(), ".braseh_key"),
         }),
       );
 

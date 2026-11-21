@@ -28,16 +28,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux-x64
-            artifact: dotts-linux-x64
+            artifact: braseh-linux-x64
           - os: ubuntu-24.04-arm
             target: linux-arm64
-            artifact: dotts-linux-arm64
+            artifact: braseh-linux-arm64
           - os: macos-14
             target: darwin-arm64
-            artifact: dotts-darwin-arm64
+            artifact: braseh-darwin-arm64
           - os: macos-15-intel
             target: darwin-x64
-            artifact: dotts-darwin-x64
+            artifact: braseh-darwin-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -57,14 +57,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          pattern: dotts-*
+          pattern: braseh-*
           merge-multiple: true
       - name: Generate checksums
-        run: sha256sum dotts-* > checksums.txt
+        run: sha256sum braseh-* > checksums.txt
       - uses: softprops/action-gh-release@v3
         with:
           files: |
-            dotts-*
+            braseh-*
             checksums.txt
           generate_release_notes: true
 

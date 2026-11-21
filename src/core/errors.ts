@@ -1,14 +1,14 @@
 import pc from 'picocolors';
 
-export class DottsError extends Error {
+export class BrasehError extends Error {
   constructor(message: string, public readonly hint?: string) {
     super(message);
-    this.name = 'DottsError';
+    this.name = 'BrasehError';
   }
 }
 
 export function formatError(error: unknown): { title: string; message: string; hint?: string } {
-  if (error instanceof DottsError) {
+  if (error instanceof BrasehError) {
     return {
       title: 'Operational Error',
       message: error.message,
@@ -22,15 +22,15 @@ export function formatError(error: unknown): { title: string; message: string; h
     return {
       title: 'Missing Secret',
       message: msg,
-      hint: 'Use "dotts secrets set <name>" to add the missing secret.',
+      hint: 'Use "braseh secrets set <name>" to add the missing secret.',
     };
   }
 
   if (msg.includes('Invalid configuration')) {
     return {
       title: 'Configuration Error',
-      message: 'Your dotts.ts file has schema errors.',
-      hint: 'Run "dotts check" for detailed validation.',
+      message: 'Your braseh.ts file has schema errors.',
+      hint: 'Run "braseh check" for detailed validation.',
     };
   }
 

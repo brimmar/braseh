@@ -1,5 +1,5 @@
 // Fixture: cyclic dependency — should fail with a clear error
-import { script } from 'dotts';
+import { script } from 'braseh';
 
 export default () => {
   const a = script('echo a', { unless: 'false' });

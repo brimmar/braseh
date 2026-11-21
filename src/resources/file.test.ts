@@ -105,7 +105,7 @@ describe('FileResource', () => {
   });
 
   it('should not recursively delete a directory on destroy', async () => {
-    const testDir = join(tmpdir(), 'dotts-file-dir-destroy-' + Math.random().toString(36).slice(2));
+    const testDir = join(tmpdir(), 'braseh-file-dir-destroy-' + Math.random().toString(36).slice(2));
     const dirPath = join(testDir, 'was-a-file');
     await mkdir(dirPath, { recursive: true });
     const keep = join(dirPath, 'keep.txt');
@@ -125,7 +125,7 @@ describe('FileResource', () => {
   });
 
   it('should succeed destroy when the file is already gone', async () => {
-    const testDir = join(tmpdir(), 'dotts-file-missing-destroy-' + Math.random().toString(36).slice(2));
+    const testDir = join(tmpdir(), 'braseh-file-missing-destroy-' + Math.random().toString(36).slice(2));
     await mkdir(testDir, { recursive: true });
     const path = join(testDir, 'gone.txt');
 
@@ -169,13 +169,13 @@ describe('FileResource', () => {
     const fileRes = new FileResource(stack, 'tpl-file', {
       path: '/tmp/tpl.txt',
       content: 'Hello {{name}}!',
-      vars: { name: 'Dotts' }
+      vars: { name: 'Braseh' }
     } as any);
 
     await Effect.runPromise(
       Effect.provide(fileRes.apply(), Layer.mergeAll(MockFS(state), MockSM, MockTemplate))
     );
     
-    expect(state.writtenContent).toBe('Hello Dotts!');
+    expect(state.writtenContent).toBe('Hello Braseh!');
   });
 });

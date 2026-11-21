@@ -5,7 +5,7 @@ import * as p from "@clack/prompts";
 import { Context, Effect, Layer } from "effect";
 import pc from "picocolors";
 import { type Component, flatten, Resource } from "../core/component";
-import { DottsError } from "../core/errors";
+import { BrasehError } from "../core/errors";
 import { SecretToken } from "../core/secret";
 import { FileSystem } from "./fs";
 import { SecretManager } from "./secrets-manager";
@@ -134,9 +134,9 @@ export const ValidationServiceLive = Layer.effect(
                 const secrets = yield* sm.list();
                 if (!secrets.includes(value.name)) {
                   yield* Effect.fail(
-                    new DottsError(
+                    new BrasehError(
                       `Secret not found: ${value.name} (referenced by ${res.id})`,
-                      `Configure the secret with 'dotts secrets set ${value.name} <value>' or verify .dotts/vault.`,
+                      `Configure the secret with 'braseh secrets set ${value.name} <value>' or verify .braseh/vault.`,
                     ),
                   );
                 }
@@ -159,7 +159,7 @@ export const ValidationServiceLive = Layer.effect(
                     const exists = yield* fs.exists(targetPath);
                     if (!exists) {
                       yield* Effect.fail(
-                        new DottsError(
+                        new BrasehError(
                           `Script '${runCommand}' executes '${exec}' which does not exist on the filesystem and has no declared dependencies`,
                           `Add 'dependsOn: [upstreamResource]' to the script resource so the command runs after its required binary is created.`,
                         ),

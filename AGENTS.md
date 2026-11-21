@@ -1,6 +1,8 @@
-# Gemini Project Context: dotts
+# braseh
 
-`dotts` is a "Dotfiles as Code" CLI tool designed to manage system configurations using a declarative TypeScript-based API. It draws heavy inspiration from Infrastructure as Code (IaC) frameworks like AWS CDK, allowing users to define their system state (packages, symlinks, files, scripts) in code.
+The command is `braseh`. The config file is `braseh.ts`. The import is `'braseh'`. The state directory is `.braseh`. The master key is `~/.braseh_key`.
+
+`braseh` is a "Dotfiles as Code" CLI tool designed to manage system configurations using a declarative TypeScript-based API. It draws heavy inspiration from Infrastructure as Code (IaC) frameworks like AWS CDK, allowing users to define their system state (packages, symlinks, files, scripts) in code.
 
 ## Project Overview
 
@@ -24,14 +26,14 @@
 - `bun run lint`: Run Biome linter.
 - `bun run format`: Format code with Biome.
 - `bun run type-check`: Run the TypeScript compiler to check types.
-- `bun run build`: Compile the project into a standalone executable named `dotts`.
+- `bun run build`: Compile the project into a standalone executable named `braseh`.
 - `bun run ci`: Run all validation steps (test, lint, type-check, build).
 
 ### Usage
 The CLI is interactive. Run `bun start` and follow the prompts to:
-- `init`: Create a new `dotts` project.
+- `init`: Create a new `braseh` project.
 - `prepare`: Refresh editor types after upgrading the CLI.
-- `check`: Validate a `dotts.ts` configuration file.
+- `check`: Validate a `braseh.ts` configuration file.
 - `apply`: Apply the configuration to the local system (includes a Dry Run mode).
 - `doctor`: Run system diagnostics.
 - `secrets`: Manage sensitive information used in templates.
@@ -39,7 +41,7 @@ The CLI is interactive. Run `bun start` and follow the prompts to:
 ## Architecture & Code Structure
 
 ### Directory Map
-- `src/core/`: The engine of `dotts`. Includes the `App`, `Stack`, `Component`, and `Resource` base classes, as well as the `Runner` that executes the resource graph.
+- `src/core/`: The engine of `braseh`. Includes the `App`, `Stack`, `Component`, and `Resource` base classes, as well as the `Runner` that executes the resource graph.
 - `src/resources/`: Concrete implementations of system resources:
     - `package.ts`: Software package management (brew, apt, npm, etc.).
     - `file.ts` & `remote-file.ts`: File creation and management (supports Mustache templates).

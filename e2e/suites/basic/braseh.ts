@@ -1,6 +1,6 @@
-// E2E test configuration for dotts
+// E2E test configuration for braseh
 // This exercises the most important resource types against a real Ubuntu system.
-import { pkg, file, link, dir, script, lineInFile, onPlatform, onDistro } from 'dotts';
+import { pkg, file, link, dir, script, lineInFile, onPlatform, onDistro } from 'braseh';
 
 export default () => {
   // ── Packages ────────────────────────────────────────────────────────────────
@@ -42,20 +42,20 @@ export default () => {
   // ── line-in-file ─────────────────────────────────────────────────────────────
 
   // Idempotently ensure a line exists in ~/.bashrc
-  lineInFile('~/.bashrc', 'export DOTTS_MANAGED=1');
+  lineInFile('~/.bashrc', 'export BRASEH_MANAGED=1');
   lineInFile('~/.bashrc', 'export PATH="$HOME/.local/bin:$PATH"');
 
   // ── Scripts ──────────────────────────────────────────────────────────────────
 
   // Only run if jq is actually installed (tests dependency ordering + unless)
-  const jqVersion = script('jq --version > /tmp/dotts-jq-version.txt', {
-    unless: 'test -f /tmp/dotts-jq-version.txt',
+  const jqVersion = script('jq --version > /tmp/braseh-jq-version.txt', {
+    unless: 'test -f /tmp/braseh-jq-version.txt',
     dependsOn: [jq],
   });
 
   // Verify tree is installed
-  script('tree --version > /tmp/dotts-tree-version.txt', {
-    unless: 'test -f /tmp/dotts-tree-version.txt',
+  script('tree --version > /tmp/braseh-tree-version.txt', {
+    unless: 'test -f /tmp/braseh-tree-version.txt',
     dependsOn: [tree],
   });
 
@@ -64,14 +64,14 @@ export default () => {
   onPlatform('linux', () => {
     onDistro('ubuntu', () => {
       // Ubuntu-specific: verify we're on the right distro
-      script('echo "ubuntu=true" > /tmp/dotts-distro-check.txt', {
-        unless: 'test -f /tmp/dotts-distro-check.txt',
+      script('echo "ubuntu=true" > /tmp/braseh-distro-check.txt', {
+        unless: 'test -f /tmp/braseh-distro-check.txt',
       });
     });
   });
 
   // This block should NOT execute in the container (it's linux, not darwin)
   onPlatform('darwin', () => {
-    script('echo "should-not-run" > /tmp/dotts-darwin-error.txt');
+    script('echo "should-not-run" > /tmp/braseh-darwin-error.txt');
   });
 };

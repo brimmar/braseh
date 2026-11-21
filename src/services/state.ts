@@ -22,7 +22,7 @@ export const StateServiceLive = Layer.effect(
   StateService,
   Effect.gen(function* () {
     const fs = yield* FileSystem;
-    let statePath = join(process.cwd(), '.dotts/state.json');
+    let statePath = join(process.cwd(), '.braseh/state.json');
 
     return StateService.of({
       setPath: (path) => Effect.sync(() => { statePath = path; }),

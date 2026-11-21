@@ -104,7 +104,7 @@ function copyViaTemp(
   return Effect.acquireUseRelease(
     Effect.tryPromise({
       try: async () => {
-        const dir = await NodeFS.mkdtemp(join(tmpdir(), 'dotts-'));
+        const dir = await NodeFS.mkdtemp(join(tmpdir(), 'braseh-'));
         const temp = join(dir, 'file');
         await NodeFS.writeFile(temp, content, { mode: 0o600 });
         return { dir, temp };

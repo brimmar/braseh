@@ -14,29 +14,29 @@ echo "════════════════════════�
 
 echo ""
 echo "── group ────────────────────────────"
-check "dotts-testgroup exists"           "getent group dotts-testgroup"
-check "dotts-tempgroup was removed"      "! getent group dotts-tempgroup"
+check "braseh-testgroup exists"           "getent group braseh-testgroup"
+check "braseh-tempgroup was removed"      "! getent group braseh-tempgroup"
 
 echo ""
 echo "── user ─────────────────────────────"
-check "dotts-testuser exists"            "id dotts-testuser"
-check "dotts-testuser has bash shell"    "getent passwd dotts-testuser | cut -d: -f7 | grep -q bash"
-check "dotts-testuser home created"      "test -d /home/dotts-testuser"
-check "dotts-testuser in testgroup"      "id -Gn dotts-testuser | grep -q dotts-testgroup"
-check "dotts-tempuser was removed"       "! id dotts-tempuser"
+check "braseh-testuser exists"            "id braseh-testuser"
+check "braseh-testuser has bash shell"    "getent passwd braseh-testuser | cut -d: -f7 | grep -q bash"
+check "braseh-testuser home created"      "test -d /home/braseh-testuser"
+check "braseh-testuser in testgroup"      "id -Gn braseh-testuser | grep -q braseh-testgroup"
+check "braseh-tempuser was removed"       "! id braseh-tempuser"
 
 echo ""
 echo "── aptRepository ────────────────────"
-check "dotts-test-repo.list exists"      "test -f /etc/apt/sources.list.d/dotts-test-repo.list"
-check "repo file has correct URI"        "grep -q 'archive.ubuntu.com/ubuntu' /etc/apt/sources.list.d/dotts-test-repo.list"
-check "repo file has universe component" "grep -q 'universe' /etc/apt/sources.list.d/dotts-test-repo.list"
+check "braseh-test-repo.list exists"      "test -f /etc/apt/sources.list.d/braseh-test-repo.list"
+check "repo file has correct URI"        "grep -q 'archive.ubuntu.com/ubuntu' /etc/apt/sources.list.d/braseh-test-repo.list"
+check "repo file has universe component" "grep -q 'universe' /etc/apt/sources.list.d/braseh-test-repo.list"
 
 echo ""
 echo "── idempotency (re-run) ─────────────"
-dotts apply /home/testuser/system.ts
-check "group still exists after re-run"  "getent group dotts-testgroup"
-check "user still exists after re-run"   "id dotts-testuser"
-check "repo list still exists"           "test -f /etc/apt/sources.list.d/dotts-test-repo.list"
+braseh apply /home/testuser/system.ts
+check "group still exists after re-run"  "getent group braseh-testgroup"
+check "user still exists after re-run"   "id braseh-testuser"
+check "repo list still exists"           "test -f /etc/apt/sources.list.d/braseh-test-repo.list"
 
 echo ""
 echo "══════════════════════════════════════"

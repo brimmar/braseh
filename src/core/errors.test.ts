@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'bun:test';
-import { formatError, DottsError } from './errors';
+import { formatError, BrasehError } from './errors';
 
 describe('Error Formatter', () => {
   it('should format missing secret error', () => {
     const error = new Error('Secret not found: API_KEY');
     const formatted = formatError(error);
     expect(formatted.title).toBe('Missing Secret');
-    expect(formatted.hint).toContain('dotts secrets set');
+    expect(formatted.hint).toContain('braseh secrets set');
   });
 
   expect(formatError('some string').title).toBe('Unexpected Error');
@@ -17,8 +17,8 @@ describe('Error Formatter', () => {
     expect(formatted.title).toBe('Permission Denied');
   });
 
-  it('should handle DottsError with custom hint', () => {
-    const error = new DottsError('Custom error', 'Try this');
+  it('should handle BrasehError with custom hint', () => {
+    const error = new BrasehError('Custom error', 'Try this');
     const formatted = formatError(error);
     expect(formatted.message).toBe('Custom error');
     expect(formatted.hint).toBe('Try this');

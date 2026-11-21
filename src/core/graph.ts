@@ -47,7 +47,7 @@ export function sortResourcesByTier(resources: Resource[]): Resource[][] {
         if (dep instanceof Resource) {
           // If the dependency is in the initial resource list, it must be completed.
           // If it's NOT in the list, we assume it's external/already satisfied or will be handled.
-          // For dotts, all resources should be in the list.
+          // For braseh, all resources should be in the list.
           return !resources.find(r => r.id === dep.id) || completed.has(dep.id);
         }
         return true;

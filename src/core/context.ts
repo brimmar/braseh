@@ -24,7 +24,7 @@ export class ActiveContext {
   static requireStack(): Stack {
     if (!this.activeStack) {
       throw new Error(
-        'No active stack found. Ensure you are calling resource helpers within a dotts configuration function.'
+        'No active stack found. Ensure you are calling resource helpers within a braseh configuration function.'
       );
     }
     return this.activeStack;

@@ -32,7 +32,7 @@ function keyMaterial(key: string): Buffer {
   return createHash("sha256").update(key, "utf8").digest();
 }
 
-export const VAULT_HEADER = "$DOTTS_VAULT;1.0;AES-256-GCM";
+export const VAULT_HEADER = "$BRASEH_VAULT;1.0;AES-256-GCM";
 
 export function formatVault(blob: string): string {
   const lines = [VAULT_HEADER];

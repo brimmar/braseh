@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { exists, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DottsError } from './core/errors';
-import { dottsInit, parseInitArgs } from './commands/init';
+import { BrasehError } from './core/errors';
+import { brasehInit, parseInitArgs } from './commands/init';
 import { tsconfigJson } from './commands/prepare';
 
 function exportedNames(src: string): Set<string> {
@@ -27,8 +27,8 @@ function exportedNames(src: string): Set<string> {
   return names;
 }
 
-describe('dotts init', () => {
-  const testProjectDir = join(tmpdir(), `dotts-test-project-${Math.random().toString(36).slice(2)}`);
+describe('braseh init', () => {
+  const testProjectDir = join(tmpdir(), `braseh-test-project-${Math.random().toString(36).slice(2)}`);
 
   afterEach(async () => {
     if (await exists(testProjectDir)) {
@@ -36,12 +36,12 @@ describe('dotts init', () => {
     }
   });
 
-  it('writes a project that imports from dotts, not this repo', async () => {
-    await dottsInit(testProjectDir);
+  it('writes a project that imports from braseh, not this repo', async () => {
+    await brasehInit(testProjectDir);
 
     expect(await exists(testProjectDir)).toBe(true);
-    const content = await Bun.file(join(testProjectDir, 'dotts.ts')).text();
-    expect(content).toContain("from 'dotts'");
+    const content = await Bun.file(join(testProjectDir, 'braseh.ts')).text();
+    expect(content).toContain("from 'braseh'");
     expect(content).not.toContain('src/public');
     expect(content).toContain("onPlatform('darwin'");
     expect(content).toContain("onDistro('ubuntu'");
@@ -55,34 +55,34 @@ describe('dotts init', () => {
     expect(parseInitArgs([])).toEqual({ projectDir: './my-dotfiles', force: false });
   });
 
-  it('refuses to re-init when dotts.ts exists unless force is set', async () => {
+  it('refuses to re-init when braseh.ts exists unless force is set', async () => {
     await mkdir(testProjectDir, { recursive: true });
     const existing = '// keep me\nexport default () => {};\n';
-    await writeFile(join(testProjectDir, 'dotts.ts'), existing);
+    await writeFile(join(testProjectDir, 'braseh.ts'), existing);
 
-    await expect(dottsInit(testProjectDir)).rejects.toThrow(DottsError);
-    await expect(dottsInit(testProjectDir)).rejects.toThrow(/Refusing to overwrite/);
-    expect(await Bun.file(join(testProjectDir, 'dotts.ts')).text()).toBe(existing);
+    await expect(brasehInit(testProjectDir)).rejects.toThrow(BrasehError);
+    await expect(brasehInit(testProjectDir)).rejects.toThrow(/Refusing to overwrite/);
+    expect(await Bun.file(join(testProjectDir, 'braseh.ts')).text()).toBe(existing);
 
-    await dottsInit(testProjectDir, { force: true });
-    const content = await Bun.file(join(testProjectDir, 'dotts.ts')).text();
-    expect(content).toContain("from 'dotts'");
+    await brasehInit(testProjectDir, { force: true });
+    const content = await Bun.file(join(testProjectDir, 'braseh.ts')).text();
+    expect(content).toContain("from 'braseh'");
     expect(content).not.toContain('keep me');
   });
 
   it('writes tsconfig.json and .gitignore when missing', async () => {
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     expect(await Bun.file(join(testProjectDir, 'tsconfig.json')).text()).toBe(tsconfigJson());
     expect(await Bun.file(join(testProjectDir, '.gitignore')).text()).toBe(
       `node_modules
-.dotts/state.json
-.dotts/secrets.json
+.braseh/state.json
+.braseh/secrets.json
 `,
     );
   });
 
-  it('merges paths.dotts into an existing tsconfig without clobbering other fields', async () => {
+  it('merges paths.braseh into an existing tsconfig without clobbering other fields', async () => {
     await mkdir(testProjectDir, { recursive: true });
     await writeFile(
       join(testProjectDir, 'tsconfig.json'),
@@ -100,7 +100,7 @@ describe('dotts init', () => {
       )}\n`,
     );
 
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     const tsconfig = JSON.parse(await Bun.file(join(testProjectDir, 'tsconfig.json')).text());
     expect(tsconfig).toEqual({
@@ -109,24 +109,24 @@ describe('dotts init', () => {
         target: 'ES2020',
         paths: {
           '@lib/*': ['./lib/*'],
-          dotts: ['./.dotts/types'],
+          braseh: ['./.braseh/types'],
         },
       },
       include: ['src/**/*.ts'],
     });
   });
 
-  it('leaves tsconfig.json unchanged when paths.dotts already exists', async () => {
+  it('leaves tsconfig.json unchanged when paths.braseh already exists', async () => {
     await mkdir(testProjectDir, { recursive: true });
-    const existing = '{\n  "compilerOptions": {\n    "paths": {\n      "dotts": ["./custom"]\n    }\n  }\n}\n';
+    const existing = '{\n  "compilerOptions": {\n    "paths": {\n      "braseh": ["./custom"]\n    }\n  }\n}\n';
     await writeFile(join(testProjectDir, 'tsconfig.json'), existing);
 
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     expect(await Bun.file(join(testProjectDir, 'tsconfig.json')).text()).toBe(existing);
   });
 
-  it('merges paths.dotts into a JSONC tsconfig with comments', async () => {
+  it('merges paths.braseh into a JSONC tsconfig with comments', async () => {
     await mkdir(testProjectDir, { recursive: true });
     await writeFile(
       join(testProjectDir, 'tsconfig.json'),
@@ -142,35 +142,35 @@ describe('dotts init', () => {
 `,
     );
 
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     const tsconfig = JSON.parse(await Bun.file(join(testProjectDir, 'tsconfig.json')).text());
-    expect(tsconfig.compilerOptions.paths.dotts).toEqual(['./.dotts/types']);
+    expect(tsconfig.compilerOptions.paths.braseh).toEqual(['./.braseh/types']);
     expect(tsconfig.compilerOptions.strict).toBe(true);
     expect(tsconfig.compilerOptions.target).toBe('ESNext');
     expect(tsconfig.include).toEqual(['src/**/*.ts']);
-    expect(await exists(join(testProjectDir, '.dotts/types/index.d.ts'))).toBe(true);
+    expect(await exists(join(testProjectDir, '.braseh/types/index.d.ts'))).toBe(true);
   });
 
-  it('throws DottsError when tsconfig.json is invalid JSONC', async () => {
+  it('throws BrasehError when tsconfig.json is invalid JSONC', async () => {
     await mkdir(testProjectDir, { recursive: true });
     await writeFile(join(testProjectDir, 'tsconfig.json'), '{ this is not json');
 
-    const err = await dottsInit(testProjectDir).catch((error: unknown) => error);
-    expect(err).toBeInstanceOf(DottsError);
+    const err = await brasehInit(testProjectDir).catch((error: unknown) => error);
+    expect(err).toBeInstanceOf(BrasehError);
     expect(err).not.toBeInstanceOf(SyntaxError);
-    expect((err as DottsError).message).toMatch(/Could not parse/);
-    expect((err as DottsError).hint).toMatch(/JSON\/JSONC/);
+    expect((err as BrasehError).message).toMatch(/Could not parse/);
+    expect((err as BrasehError).hint).toMatch(/JSON\/JSONC/);
   });
 
-  it('leaves JSONC tsconfig bytes unchanged when paths.dotts already exists', async () => {
+  it('leaves JSONC tsconfig bytes unchanged when paths.braseh already exists', async () => {
     await mkdir(testProjectDir, { recursive: true });
     const existing = `{
   // keep this comment
   "compilerOptions": {
     /* and this block */
     "paths": {
-      "dotts": ["./custom"]
+      "braseh": ["./custom"]
     }
   }
 }
@@ -178,7 +178,7 @@ describe('dotts init', () => {
     await writeFile(join(testProjectDir, 'tsconfig.json'), existing);
     expect(() => JSON.parse(existing)).toThrow(SyntaxError);
 
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     expect(await Bun.file(join(testProjectDir, 'tsconfig.json')).text()).toBe(existing);
   });
@@ -188,15 +188,15 @@ describe('dotts init', () => {
     const existing = 'dist\n*.log\n';
     await writeFile(join(testProjectDir, '.gitignore'), existing);
 
-    await dottsInit(testProjectDir);
+    await brasehInit(testProjectDir);
 
     expect(await Bun.file(join(testProjectDir, '.gitignore')).text()).toBe(existing);
   });
 
-  it('writes .dotts/types/index.d.ts describing pkg', async () => {
-    await dottsInit(testProjectDir);
+  it('writes .braseh/types/index.d.ts describing pkg', async () => {
+    await brasehInit(testProjectDir);
 
-    const dts = await Bun.file(join(testProjectDir, '.dotts/types/index.d.ts')).text();
+    const dts = await Bun.file(join(testProjectDir, '.braseh/types/index.d.ts')).text();
     expect(dts.includes('declare') || dts.includes('export function pkg')).toBe(true);
     expect(dts).toContain('pkg');
   });

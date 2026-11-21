@@ -43,11 +43,11 @@ RUN useradd -m -s /bin/bash testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Copy binary
-COPY dotts /usr/local/bin/dotts
-RUN chmod +x /usr/local/bin/dotts
+COPY braseh /usr/local/bin/braseh
+RUN chmod +x /usr/local/bin/braseh
 
 # Copy test files
-COPY --chown=testuser:testuser e2e/suites/service/dotts.ts /home/testuser/service.ts
+COPY --chown=testuser:testuser e2e/suites/service/braseh.ts /home/testuser/service.ts
 COPY --chown=testuser:testuser e2e/suites/service/verify.sh /home/testuser/verify.sh
 RUN chmod +x /home/testuser/verify.sh
 

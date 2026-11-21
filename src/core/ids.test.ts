@@ -8,7 +8,7 @@ describe('migrateStateId', () => {
     expect(migrateStateId('link-~/.config/nvim', 'link')).toBe('link:~/.config/nvim');
     expect(migrateStateId('dir-~/.config', 'dir')).toBe('dir:~/.config');
     expect(migrateStateId('remote-/tmp/bin', 'remote')).toBe('remote:/tmp/bin');
-    expect(migrateStateId('git-/tmp/dotts', 'git')).toBe('git:/tmp/dotts');
+    expect(migrateStateId('git-/tmp/braseh', 'git')).toBe('git:/tmp/braseh');
     expect(migrateStateId('service-sshd', 'service')).toBe('service:sshd');
     expect(migrateStateId('user-brimmar', 'user')).toBe('user:brimmar');
     expect(migrateStateId('group-sudo', 'group')).toBe('group:sudo');

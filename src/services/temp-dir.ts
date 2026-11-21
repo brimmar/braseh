@@ -19,7 +19,7 @@ export const TempDirServiceLive = Layer.effect(
 
     return TempDirService.of({
       use: (f) => {
-        const path = join(tmpdir(), `dotts-${randomBytes(4).toString('hex')}`);
+        const path = join(tmpdir(), `braseh-${randomBytes(4).toString('hex')}`);
         
         const acquire = fs.mkdir(path).pipe(Effect.as(path));
         const release = (path: string) => Effect.ignore(fs.rm(path));

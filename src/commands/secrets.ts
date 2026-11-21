@@ -6,7 +6,7 @@ import { FileSystemLive } from "../services/fs";
 import { SecretStoreLive } from "../services/secrets";
 import { SecretManager, SecretManagerLive } from "../services/secrets-manager";
 
-export async function dottsSecretSet(name: string, value: string) {
+export async function brasehSecretSet(name: string, value: string) {
   const program = Effect.gen(function* (_) {
     const sm = yield* _(SecretManager);
     yield* _(sm.set(name, value));
@@ -33,7 +33,7 @@ export interface SecretListResult {
   secrets: string[];
 }
 
-export async function dottsSecretList(
+export async function brasehSecretList(
   options: SecretListOptions = {},
 ): Promise<SecretListResult> {
   const program = Effect.gen(function* (_) {
@@ -68,7 +68,7 @@ export async function dottsSecretList(
   return await Effect.runPromise(runnable);
 }
 
-export async function dottsSecretRemove(name: string) {
+export async function brasehSecretRemove(name: string) {
   const program = Effect.gen(function* (_) {
     const sm = yield* _(SecretManager);
     yield* _(sm.remove(name));
@@ -85,7 +85,7 @@ export async function dottsSecretRemove(name: string) {
   await Effect.runPromise(runnable);
 }
 
-export async function dottsSecretGet(name: string) {
+export async function brasehSecretGet(name: string) {
   const program = Effect.gen(function* (_) {
     const sm = yield* _(SecretManager);
     const value = yield* _(sm.get(name));

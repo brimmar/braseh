@@ -23,7 +23,7 @@ import {
   ValidationService,
   ValidationServiceLive,
 } from "../services/validation";
-import { dottsPrepare } from "./prepare";
+import { brasehPrepare } from "./prepare";
 
 function throwOnTypeErrors(
   diagnostics: TypecheckDiagnostic[],
@@ -47,9 +47,9 @@ async function typecheckProject(
   writeTypesIfMissing: boolean,
   json = false,
 ): Promise<void> {
-  const typesDir = join(projectDir, ".dotts", "types");
+  const typesDir = join(projectDir, ".braseh", "types");
   if (writeTypesIfMissing && !(await exists(typesDir))) {
-    await dottsPrepare(projectDir);
+    await brasehPrepare(projectDir);
   }
   throwOnTypeErrors(
     typecheckFile({
@@ -71,7 +71,7 @@ export interface CheckResult {
   valid: boolean;
 }
 
-export async function dottsCheck(
+export async function brasehCheck(
   configPath: string,
   options: CheckOptions = {},
 ): Promise<CheckResult> {
@@ -94,22 +94,22 @@ export async function dottsCheck(
             yield* remoteRepo.clone(url, dir);
           }
 
-          let finalPath = join(dir, "dotts.ts");
+          let finalPath = join(dir, "braseh.ts");
           if (!existsSync(finalPath)) {
-            if (existsSync(join(dir, "dotts", "dotts.ts"))) {
-              finalPath = join(dir, "dotts", "dotts.ts");
-            } else if (existsSync(join(dir, ".dotts", "dotts.ts"))) {
-              finalPath = join(dir, ".dotts", "dotts.ts");
+            if (existsSync(join(dir, "braseh", "braseh.ts"))) {
+              finalPath = join(dir, "braseh", "braseh.ts");
+            } else if (existsSync(join(dir, ".braseh", "braseh.ts"))) {
+              finalPath = join(dir, ".braseh", "braseh.ts");
             }
           }
           const sm = yield* SecretManager;
           const configDir = dirname(finalPath);
-          const vaultCandidate = existsSync(join(dir, ".dotts", "vault"))
-            ? join(dir, ".dotts", "vault")
-            : join(configDir, ".dotts", "vault");
+          const vaultCandidate = existsSync(join(dir, ".braseh", "vault"))
+            ? join(dir, ".braseh", "vault")
+            : join(configDir, ".braseh", "vault");
           yield* sm.setPaths({
             secretsFile: vaultCandidate,
-            masterKeyFile: join(homedir(), ".dotts_key"),
+            masterKeyFile: join(homedir(), ".braseh_key"),
           });
           yield* Effect.promise(() =>
             typecheckProject(finalPath, dir, true, options.json),
@@ -129,8 +129,8 @@ export async function dottsCheck(
       const absolutePath = resolve(configPath);
       const sm = yield* SecretManager;
       yield* sm.setPaths({
-        secretsFile: join(dirname(absolutePath), ".dotts", "vault"),
-        masterKeyFile: join(homedir(), ".dotts_key"),
+        secretsFile: join(dirname(absolutePath), ".braseh", "vault"),
+        masterKeyFile: join(homedir(), ".braseh_key"),
       });
       yield* Effect.promise(() =>
         typecheckProject(

@@ -1,33 +1,33 @@
-# dotts
+# braseh
 
-[![CI](https://github.com/brimmar/dotTS/actions/workflows/ci.yml/badge.svg)](https://github.com/brimmar/dotTS/actions/workflows/ci.yml)
+[![CI](https://github.com/brimmar/braseh/actions/workflows/ci.yml/badge.svg)](https://github.com/brimmar/braseh/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-dotts is TypeScript for one machine. You declare packages, files, links, services, and the rest of localhost in a `dotts.ts` file. One binary applies it. `dotts init` writes editor types next to that file, so completions work without an npm install in the project.
+braseh is TypeScript for one machine. You declare packages, files, links, services, and the rest of localhost in a `braseh.ts` file. One binary applies it. `braseh init` writes editor types next to that file, so completions work without an npm install in the project.
 
 ## Install
 
 ```bash
-curl -fsSL https://github.com/brimmar/dotTS/raw/main/scripts/install.sh | bash
+curl -fsSL https://github.com/brimmar/braseh/raw/main/scripts/install.sh | bash
 ```
 
-The same darwin and linux binaries (x64 and arm64) are on [GitHub Releases](https://github.com/brimmar/dotTS/releases).
+The same darwin and linux binaries (x64 and arm64) are on [GitHub Releases](https://github.com/brimmar/braseh/releases).
 
 ## Quick start
 
 ```bash
-dotts init ./my-dotfiles
+braseh init ./my-dotfiles
 cd ./my-dotfiles
-# edit dotts.ts. Completions work.
-dotts check
-dotts apply --dry-run
-dotts apply
+# edit braseh.ts. Completions work.
+braseh check
+braseh apply --dry-run
+braseh apply
 ```
 
-`init` writes a project that imports from `'dotts'`.
+`init` writes a project that imports from `'braseh'`.
 
 ```ts
-import { pkg, file, onPlatform, onDistro } from 'dotts';
+import { pkg, file, onPlatform, onDistro } from 'braseh';
 
 export default () => {
   pkg('git');
@@ -48,26 +48,26 @@ export default () => {
 
 ## Prepare after a CLI upgrade
 
-After you upgrade the `dotts` binary, run `dotts prepare` in the project. That refreshes `.dotts/types` so the editor matches the CLI you just installed. `init` already runs this once.
+After you upgrade the `braseh` binary, run `braseh prepare` in the project. That refreshes `.braseh/types` so the editor matches the CLI you just installed. `init` already runs this once.
 
 ```bash
-dotts prepare
+braseh prepare
 ```
 
 ## Commands
 
 ```text
-dotts init [dir]
-dotts prepare [dir]
-dotts check [path]
-dotts apply [path] [--dry-run]
-dotts doctor
-dotts secrets set NAME value
-dotts secrets list
-dotts secrets remove NAME
+braseh init [dir]
+braseh prepare [dir]
+braseh check [path]
+braseh apply [path] [--dry-run]
+braseh doctor
+braseh secrets set NAME value
+braseh secrets list
+braseh secrets remove NAME
 ```
 
-`dotts --help` and `dotts -h` print the same list. No arguments opens the interactive menu.
+`braseh --help` and `braseh -h` print the same list. No arguments opens the interactive menu.
 
 ## API reference
 
@@ -89,7 +89,7 @@ pkg(name: string, props?: PackageProps): ResourceHandle
 Installs a package. Props: `manager?: 'brew' | 'apt' | 'npm' | 'pacman' | 'bun' | 'cargo' | 'pip'`, `version?: string`. Omit `manager` and the CLI infers one from the OS and distro.
 
 ```ts
-import { pkg } from 'dotts';
+import { pkg } from 'braseh';
 
 pkg('git');
 pkg('ripgrep', { manager: 'brew' });
@@ -104,7 +104,7 @@ file(path: string, props: FileProps): ResourceHandle
 Writes a file. Props: `content: string | SecretToken` (required), `vars?: Record<string, unknown>` (Mustache), `mode?: number`, `uid?: number`, `gid?: number`.
 
 ```ts
-import { file } from 'dotts';
+import { file } from 'braseh';
 
 file('~/.gitconfig', {
   content: '[user]\n\tname = Ada\n',
@@ -121,7 +121,7 @@ link(path: string, source: string, props?: LinkProps): ResourceHandle
 Creates a symlink at `path` pointing at `source`.
 
 ```ts
-import { link } from 'dotts';
+import { link } from 'braseh';
 
 link('~/.config/nvim', '~/dotfiles/nvim');
 ```
@@ -135,7 +135,7 @@ dir(path: string, props?: DirectoryProps): ResourceHandle
 Creates a directory. Props: `mode?: number`, `uid?: number`, `gid?: number`.
 
 ```ts
-import { dir } from 'dotts';
+import { dir } from 'braseh';
 
 dir('~/.config/myapp');
 ```
@@ -149,7 +149,7 @@ script(run: string, props?: ScriptProps): ResourceHandle
 Runs a shell command. The resource id is a hash of `run` plus stable props (`workingDir`, `unless`, `onlyIf`, `become`, `environment`). Props: `unless?: string` (skip when this command exits 0), `onlyIf?: string` (run only when this command exits 0), `workingDir?: string`, `environment?: Record<string, string>`.
 
 ```ts
-import { script } from 'dotts';
+import { script } from 'braseh';
 
 script('jq --version > /tmp/jq-version.txt', {
   unless: 'test -f /tmp/jq-version.txt',
@@ -166,7 +166,7 @@ remoteFile(path: string, props: RemoteFileProps): ResourceHandle
 Downloads a URL to `path`. Props: `url: string` (required), `sha256?: string`, `mode?: number`, `uid?: number`, `gid?: number`.
 
 ```ts
-import { remoteFile } from 'dotts';
+import { remoteFile } from 'braseh';
 
 remoteFile('~/.local/bin/tool.sh', {
   url: 'https://example.com/tool.sh',
@@ -183,10 +183,10 @@ git(url: string, props: GitProps): ResourceHandle
 Clones a repository. Props: `dest: string` (required), `branch?: string`, `depth?: number`, `recursive?: boolean`, `sparse?: string[]`.
 
 ```ts
-import { git } from 'dotts';
+import { git } from 'braseh';
 
-git('https://github.com/brimmar/dotTS.git', {
-  dest: '/tmp/dotts',
+git('https://github.com/brimmar/braseh.git', {
+  dest: '/tmp/braseh',
   depth: 1,
 });
 ```
@@ -200,9 +200,9 @@ lineInFile(path: string, line: string, props?: LineInFileProps): ResourceHandle
 Adds or removes a line. Props: `regexp?: string | RegExp`, `state?: 'present' | 'absent'`.
 
 ```ts
-import { lineInFile } from 'dotts';
+import { lineInFile } from 'braseh';
 
-lineInFile('~/.bashrc', 'export DOTTS_MANAGED=1');
+lineInFile('~/.bashrc', 'export BRASEH_MANAGED=1');
 ```
 
 ### service
@@ -214,7 +214,7 @@ service(name: string, props?: ServiceProps): ResourceHandle
 Manages a systemd unit. Linux only. Apply fails on other operating systems. Props: `state?: 'started' | 'stopped' | 'restarted' | 'reloaded'`, `enabled?: boolean`.
 
 ```ts
-import { service } from 'dotts';
+import { service } from 'braseh';
 
 service('sshd', { state: 'started', enabled: true });
 ```
@@ -228,7 +228,7 @@ user(name: string, props?: UserProps): ResourceHandle
 Manages a login account. Props: `uid?: number`, `gid?: number | string`, `groups?: string[]`, `shell?: string`, `home?: string`, `createHome?: boolean`, `state?: 'present' | 'absent'`.
 
 ```ts
-import { user } from 'dotts';
+import { user } from 'braseh';
 
 user('deploy', { shell: '/bin/bash', createHome: true });
 ```
@@ -242,7 +242,7 @@ group(name: string, props?: GroupProps): ResourceHandle
 Manages a system group. Props: `gid?: number`, `state?: 'present' | 'absent'`.
 
 ```ts
-import { group } from 'dotts';
+import { group } from 'braseh';
 
 group('docker');
 ```
@@ -256,7 +256,7 @@ aptRepository(name: string, props: AptRepositoryProps): ResourceHandle
 Adds or removes an apt source. Debian and Ubuntu only. Props: `uri: string`, `distribution: string`, `components: string[]`, `key?: string`, `state?: 'present' | 'absent'`.
 
 ```ts
-import { aptRepository } from 'dotts';
+import { aptRepository } from 'braseh';
 
 aptRepository('nodejs', {
   uri: 'https://deb.nodesource.com/node_22.x',
@@ -274,7 +274,7 @@ unarchive(id: string, props: UnarchiveProps): ResourceHandle
 Extracts an archive. `id` is the stable resource id fragment (`unarchive:${id}`). Props: `src: string`, `dest: string`, `stripComponents?: number`, `mode?: number`, `uid?: number`, `gid?: number`.
 
 ```ts
-import { unarchive } from 'dotts';
+import { unarchive } from 'braseh';
 
 unarchive('tools', { src: '~/tools.tar.gz', dest: '~/.local/opt/tools' });
 ```
@@ -285,10 +285,10 @@ unarchive('tools', { src: '~/tools.tar.gz', dest: '~/.local/opt/tools' });
 secret(name: string): SecretToken
 ```
 
-Returns a token for a named secret. Use it as `file` content. Values come from `dotts secrets`.
+Returns a token for a named secret. Use it as `file` content. Values come from `braseh secrets`.
 
 ```ts
-import { file, secret } from 'dotts';
+import { file, secret } from 'braseh';
 
 file('~/.npmrc', { content: secret('NPM_TOKEN') });
 ```
@@ -302,7 +302,7 @@ onPlatform(os: OS | OS[], callback: () => void | Promise<void>): void
 Runs `callback` when the current OS matches. `OS` is `'linux' | 'darwin' | 'win32' | 'freebsd' | 'openbsd' | 'aix' | 'sunos' | 'android'`. Declare resources with the same global helpers inside the callback.
 
 ```ts
-import { pkg, onPlatform } from 'dotts';
+import { pkg, onPlatform } from 'braseh';
 
 onPlatform('darwin', () => {
   pkg('iterm2');
@@ -322,7 +322,7 @@ onDistro(distro: Distro | Distro[], callback: () => void | Promise<void>): void
 Runs `callback` when the current Linux distro matches. Matching uses `/etc/os-release` `ID` and `ID_LIKE`, so Pop!_OS (`ID=pop`) matches `pop` and `ubuntu`. Unknown distros never match. `Distro` is `'ubuntu' | 'debian' | 'pop' | 'arch' | 'fedora' | 'centos' | 'rhel' | 'alpine'`.
 
 ```ts
-import { pkg, onDistro } from 'dotts';
+import { pkg, onDistro } from 'braseh';
 
 onDistro(['ubuntu', 'debian'], () => {
   pkg('build-essential');
@@ -332,16 +332,16 @@ onDistro(['ubuntu', 'debian'], () => {
 ## Secrets
 
 ```bash
-dotts secrets set NAME value
-dotts secrets list
-dotts secrets remove NAME
+braseh secrets set NAME value
+braseh secrets list
+braseh secrets remove NAME
 ```
 
-Values are encrypted at rest. The master key lives in `~/.dotts_key`. Reference a secret from config with `secret('NAME')`.
+Values are encrypted at rest. The master key lives in `~/.braseh_key`. Reference a secret from config with `secret('NAME')`.
 
 ## Comparison
 
-| | dotts | chezmoi | pyinfra | Nix |
+| | braseh | chezmoi | pyinfra | Nix |
 |---|---|---|---|---|
 | Config language | TypeScript | templates / TOML | Python | Nix |
 | Install | one binary | one binary | Python | Nix |
@@ -351,7 +351,7 @@ Values are encrypted at rest. The master key lives in `~/.dotts_key`. Reference 
 
 ## Non-goals
 
-dotts is not a fleet tool. It does not SSH into other hosts.
+braseh is not a fleet tool. It does not SSH into other hosts.
 
 It is not bit-for-bit reproducible. Apply converges live state on this machine. It is not a Nix rebuild.
 

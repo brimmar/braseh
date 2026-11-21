@@ -78,7 +78,7 @@ describe('SystemCommand Service', () => {
   });
 
   it('should not interpret shell metacharacters in execFile args', async () => {
-    const pwned = join(tmpdir(), `dotts-exec-pwned-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const pwned = join(tmpdir(), `braseh-exec-pwned-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     const payload = `a; touch ${pwned}`;
 
     const program = Effect.gen(function* () {

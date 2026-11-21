@@ -21,7 +21,7 @@ check "nginx is listening on port 80"    "ss -tlnp | grep -q ':80'"
 echo ""
 echo "── idempotency ──────────────────────"
 echo "  (re-running — should be no-op)"
-dotts apply /home/testuser/service.ts
+braseh apply /home/testuser/service.ts
 check "nginx still active after re-run"  "systemctl is-active nginx"
 
 echo ""

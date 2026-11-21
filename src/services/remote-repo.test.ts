@@ -8,7 +8,7 @@ describe('RemoteRepoService', () => {
   it('should resolve shorthand to GitHub URL', async () => {
     const program = Effect.gen(function* () {
       const service = yield* RemoteRepoService;
-      return yield* service.resolve('brimmar/dotts');
+      return yield* service.resolve('brimmar/braseh');
     });
 
     const result = await Effect.runPromise(program.pipe(
@@ -17,7 +17,7 @@ describe('RemoteRepoService', () => {
       Effect.provide(Layer.succeed(FileSystem, FileSystem.of({ writeFileBytes: () => Effect.void } as any)))
     ));
 
-    expect(result).toBe('https://github.com/brimmar/dotts.git');
+    expect(result).toBe('https://github.com/brimmar/braseh.git');
   });
 
   it('should clone a repository', async () => {
@@ -29,7 +29,7 @@ describe('RemoteRepoService', () => {
 
     const program = Effect.gen(function* () {
       const service = yield* RemoteRepoService;
-      yield* service.clone('https://github.com/brimmar/dotts.git', '/tmp/dotts');
+      yield* service.clone('https://github.com/brimmar/braseh.git', '/tmp/braseh');
     });
 
     await Effect.runPromise(program.pipe(
@@ -38,6 +38,6 @@ describe('RemoteRepoService', () => {
       Effect.provide(Layer.succeed(FileSystem, FileSystem.of({ writeFileBytes: () => Effect.void } as any)))
     ));
 
-    expect(executedCommand).toContain('git clone https://github.com/brimmar/dotts.git /tmp/dotts');
+    expect(executedCommand).toContain('git clone https://github.com/brimmar/braseh.git /tmp/braseh');
   });
 });

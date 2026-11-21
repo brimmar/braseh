@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# dotts E2E test runner — all suites
+# braseh E2E test runner — all suites
 # Usage: ./e2e/run.sh [--suite <name>] [--keep] [--no-build]
 #   --suite basic|advanced|system|secrets|service  Run only one suite
 #   --keep     Keep containers alive after run (for debugging)
-#   --no-build Skip binary rebuild (use existing ./dotts)
+#   --no-build Skip binary rebuild (use existing ./braseh)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -32,8 +32,8 @@ hr() { echo "──────────────────────�
 
 run_suite() {
   local suite="$1"
-  local image="dotts-e2e-${suite}:latest"
-  local container="dotts-e2e-${suite}-run"
+  local image="braseh-e2e-${suite}:latest"
+  local container="braseh-e2e-${suite}-run"
 
   echo ""
   echo "╔══════════════════════════════════════╗"
@@ -66,7 +66,7 @@ run_suite() {
     basic)
       run_cmd="
         set -e
-        dotts apply /home/testuser/basic.ts
+        braseh apply /home/testuser/basic.ts
         bash /home/testuser/verify-basic.sh
       "
       ;;
@@ -74,7 +74,7 @@ run_suite() {
     advanced)
       run_cmd="
         set -e
-        dotts apply /home/testuser/advanced.ts
+        braseh apply /home/testuser/advanced.ts
         bash /home/testuser/verify-advanced.sh
       "
       ;;
@@ -82,7 +82,7 @@ run_suite() {
     system)
       run_cmd="
         set -e
-        dotts apply /home/testuser/system.ts
+        braseh apply /home/testuser/system.ts
         bash /home/testuser/verify-system.sh
       "
       ;;
@@ -91,18 +91,18 @@ run_suite() {
       run_cmd="
         set -e
         # Set up secrets before applying
-        mkdir -p .dotts
-        dotts secrets set DB_PASSWORD 'supersecret123'
-        dotts secrets set API_KEY 'test-api-key-abc'
+        mkdir -p .braseh
+        braseh secrets set DB_PASSWORD 'supersecret123'
+        braseh secrets set API_KEY 'test-api-key-abc'
 
         # Test check command
-        dotts check /home/testuser/secrets.ts
+        braseh check /home/testuser/secrets.ts
 
         # Test init command
-        dotts init /tmp/dotts-init-test
+        braseh init /tmp/braseh-init-test
 
         # Test dry-run (write a sentinel that SHOULD NOT be created)
-        dotts apply /home/testuser/basic.ts --dry-run
+        braseh apply /home/testuser/basic.ts --dry-run
 
         bash /home/testuser/verify-secrets.sh
       "
@@ -113,7 +113,7 @@ run_suite() {
         set -e
         # Wait for systemd to finish booting
         sleep 3
-        su - testuser -c 'dotts apply /home/testuser/service.ts && bash /home/testuser/verify.sh'
+        su - testuser -c 'braseh apply /home/testuser/service.ts && bash /home/testuser/verify.sh'
       "
       ;;
   esac
@@ -169,17 +169,17 @@ run_suite() {
 
 echo ""
 echo "╔══════════════════════════════════════╗"
-echo "║       dotts E2E Test Runner          ║"
+echo "║       braseh E2E Test Runner          ║"
 echo "╚══════════════════════════════════════╝"
 echo "  Suites: ${SUITES[*]}"
 echo ""
 
 # Build binary (once, shared across suites)
 if [ "$NO_BUILD" = false ]; then
-  echo "→ Building dotts binary..."
+  echo "→ Building braseh binary..."
   cd "$REPO_ROOT"
-  bun build ./src/index.ts --compile --outfile dotts
-  echo "  ✓ Binary built ($(du -sh dotts | cut -f1))"
+  bun build ./src/index.ts --compile --outfile braseh
+  echo "  ✓ Binary built ($(du -sh braseh | cut -f1))"
 fi
 
 # Run each suite

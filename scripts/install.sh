@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO="${DOTTS_REPO:-brimmar/dotTS}"
-INSTALL_DIR="${DOTTS_DIR:-$HOME/.local/bin}"
+REPO="${BRASEH_REPO:-brimmar/braseh}"
+INSTALL_DIR="${BRASEH_DIR:-$HOME/.local/bin}"
 
 die() {
   echo "$@" >&2
@@ -47,7 +47,7 @@ main() {
   target=$(detect_os_arch)
 
   local version="${1:-latest}"
-  local binary="dotts-${target}"
+  local binary="braseh-${target}"
 
   if [ "$version" = "latest" ]; then
     url="https://github.com/${REPO}/releases/latest/download/${binary}"
@@ -57,11 +57,11 @@ main() {
 
   mkdir -p "$INSTALL_DIR"
 
-  echo "downloading dotts (${target})..."
-  download "$url" "${INSTALL_DIR}/dotts"
-  chmod +x "${INSTALL_DIR}/dotts"
+  echo "downloading braseh (${target})..."
+  download "$url" "${INSTALL_DIR}/braseh"
+  chmod +x "${INSTALL_DIR}/braseh"
 
-  echo "dotts installed to ${INSTALL_DIR}/dotts"
+  echo "braseh installed to ${INSTALL_DIR}/braseh"
 
   if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
     echo ""

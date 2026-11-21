@@ -17,7 +17,7 @@ export interface DoctorResult {
   writeAccess: boolean;
 }
 
-export async function dottsDoctor(
+export async function brasehDoctor(
   options: DoctorOptions = {},
 ): Promise<DoctorResult> {
   if (!options.json) {
@@ -58,7 +58,7 @@ export async function dottsDoctor(
 
     // 3. Permissions check
     const cwd = process.cwd();
-    const testFile = `${cwd}/.dotts-write-test`;
+    const testFile = `${cwd}/.braseh-write-test`;
     const writeResult = yield* Effect.match(
       fs.writeFile(testFile, 'test'),
       {

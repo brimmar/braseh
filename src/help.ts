@@ -1,27 +1,27 @@
-export const GLOBAL_HELP = `dotts - Declarative dotfiles management with TypeScript
+export const GLOBAL_HELP = `braseh - Declarative dotfiles management with TypeScript
 
 Usage:
-  dotts [command] [options]
-  dotts [options]
+  braseh [command] [options]
+  braseh [options]
 
 Commands:
-  init [dir]                     Initialize a new dotts configuration project
-  prepare [dir]                  Refresh TypeScript editor definitions in .dotts/types
-  check [path]                   Validate a dotts.ts configuration without applying
+  init [dir]                     Initialize a new braseh configuration project
+  prepare [dir]                  Refresh TypeScript editor definitions in .braseh/types
+  check [path]                   Validate a braseh.ts configuration without applying
   apply [path]                   Apply system configuration (packages, files, symlinks)
   doctor                         Run system diagnostics and verify required tools
-  secrets <action>               Manage encrypted secrets vault (.dotts/vault)
+  secrets <action>               Manage encrypted secrets vault (.braseh/vault)
 
 Options:
   -v, --version                  Print CLI version
-  -h, --help                     Show help for dotts or a specific command
+  -h, --help                     Show help for braseh or a specific command
 
-Run 'dotts <command> --help' for more information on a specific command.`;
+Run 'braseh <command> --help' for more information on a specific command.`;
 
-export const INIT_HELP = `dotts init - Initialize a new dotts configuration project
+export const INIT_HELP = `braseh init - Initialize a new braseh configuration project
 
 Usage:
-  dotts init [dir] [options]
+  braseh init [dir] [options]
 
 Arguments:
   dir                            Target directory (default: ./my-dotfiles)
@@ -31,14 +31,14 @@ Options:
   -h, --help                     Show this help message
 
 Examples:
-  dotts init
-  dotts init ~/dotfiles
-  dotts init --force .`;
+  braseh init
+  braseh init ~/dotfiles
+  braseh init --force .`;
 
-export const PREPARE_HELP = `dotts prepare - Refresh TypeScript editor definitions and type declarations
+export const PREPARE_HELP = `braseh prepare - Refresh TypeScript editor definitions and type declarations
 
 Usage:
-  dotts prepare [dir] [options]
+  braseh prepare [dir] [options]
 
 Arguments:
   dir                            Project root containing tsconfig.json (default: current directory)
@@ -47,21 +47,21 @@ Options:
   -h, --help                     Show this help message
 
 Description:
-  Generates and refreshes .dotts/types/index.d.ts so your editor
-  provides full autocomplete and type checking for dotts resources.
-  Run this after upgrading the dotts CLI.
+  Generates and refreshes .braseh/types/index.d.ts so your editor
+  provides full autocomplete and type checking for braseh resources.
+  Run this after upgrading the braseh CLI.
 
 Examples:
-  dotts prepare
-  dotts prepare ~/dotfiles`;
+  braseh prepare
+  braseh prepare ~/dotfiles`;
 
-export const CHECK_HELP = `dotts check - Validate a configuration file without executing side effects
+export const CHECK_HELP = `braseh check - Validate a configuration file without executing side effects
 
 Usage:
-  dotts check [path] [options]
+  braseh check [path] [options]
 
 Arguments:
-  path                           Path to the configuration file (default: ./dotts.ts)
+  path                           Path to the configuration file (default: ./braseh.ts)
 
 Options:
   --json                         Output validation report as structured JSON
@@ -69,21 +69,21 @@ Options:
 
 Description:
   Loads the configuration, builds the dependency graph, verifies secret
-  references exist in .dotts/vault, and checks executable prerequisites.
+  references exist in .braseh/vault, and checks executable prerequisites.
 
 Examples:
-  dotts check
-  dotts check ./dotts.ts
-  dotts check --json`;
+  braseh check
+  braseh check ./braseh.ts
+  braseh check --json`;
 
-export const APPLY_HELP = `dotts apply - Apply declarative system configurations to the local machine
+export const APPLY_HELP = `braseh apply - Apply declarative system configurations to the local machine
 
 Usage:
-  dotts apply [path] [options]
+  braseh apply [path] [options]
 
 Arguments:
-  path                           Path to dotts configuration file or repository shorthand
-                                 (e.g., ./dotts.ts, ~/dotfiles, or user/repo) (default: ./dotts.ts)
+  path                           Path to braseh configuration file or repository shorthand
+                                 (e.g., ./braseh.ts, ~/dotfiles, or user/repo) (default: ./braseh.ts)
 
 Options:
   --dry-run                      Preview planned changes without modifying the system
@@ -94,20 +94,20 @@ Options:
 
 Description:
   Evaluates the configuration graph and reconciles system state in dependency order.
-  Tracks state in ~/.dotts/state.json to detect additions, changes, and deletions.
+  Tracks state in ~/.braseh/state.json to detect additions, changes, and deletions.
   Each applied resource reports its execution duration on the right.
 
 Examples:
-  dotts apply --dry-run
-  dotts apply -y
-  dotts apply ./dotts.ts --verbose
-  dotts apply --json
-  dotts apply brimmar/dotfiles -y`;
+  braseh apply --dry-run
+  braseh apply -y
+  braseh apply ./braseh.ts --verbose
+  braseh apply --json
+  braseh apply brimmar/dotfiles -y`;
 
-export const DOCTOR_HELP = `dotts doctor - Run system diagnostics and verify tool prerequisites
+export const DOCTOR_HELP = `braseh doctor - Run system diagnostics and verify tool prerequisites
 
 Usage:
-  dotts doctor [options]
+  braseh doctor [options]
 
 Options:
   --json                         Output diagnostic results as structured JSON
@@ -118,13 +118,13 @@ Description:
   and verifies availability of core tools (bun, node, npm, git, brew, apt-get).
 
 Examples:
-  dotts doctor
-  dotts doctor --json`;
+  braseh doctor
+  braseh doctor --json`;
 
-export const SECRETS_HELP = `dotts secrets - Manage encrypted credentials and tokens in .dotts/vault
+export const SECRETS_HELP = `braseh secrets - Manage encrypted credentials and tokens in .braseh/vault
 
 Usage:
-  dotts secrets <action> [arguments] [options]
+  braseh secrets <action> [arguments] [options]
 
 Commands:
   get <name>                     Retrieve a secret value from the vault
@@ -136,22 +136,22 @@ Options:
   -h, --help                     Show this help message
 
 Description:
-  Secrets are encrypted with AES-256-GCM using the key in ~/.dotts_key,
-  ~/.dotts-key, ~/.vault-pass, or the DOTTS_KEY environment variable.
+  Secrets are encrypted with AES-256-GCM using the key in ~/.braseh_key,
+  ~/.braseh-key, ~/.vault-pass, or the BRASEH_KEY environment variable.
 
 Examples:
-  dotts secrets list
-  dotts secrets list --json
-  dotts secrets get ssh_private_key
-  dotts secrets set API_KEY "secret-value"
-  dotts secrets remove API_KEY
+  braseh secrets list
+  braseh secrets list --json
+  braseh secrets get ssh_private_key
+  braseh secrets set API_KEY "secret-value"
+  braseh secrets remove API_KEY
 
-Run 'dotts secrets <action> --help' for details on a specific action.`;
+Run 'braseh secrets <action> --help' for details on a specific action.`;
 
-export const SECRETS_GET_HELP = `dotts secrets get - Retrieve a secret value from the vault
+export const SECRETS_GET_HELP = `braseh secrets get - Retrieve a secret value from the vault
 
 Usage:
-  dotts secrets get <name>
+  braseh secrets get <name>
 
 Arguments:
   name                           Name of the secret to retrieve
@@ -160,12 +160,12 @@ Options:
   -h, --help                     Show this help message
 
 Examples:
-  dotts secrets get ssh_private_key`;
+  braseh secrets get ssh_private_key`;
 
-export const SECRETS_SET_HELP = `dotts secrets set - Store an encrypted secret in the vault
+export const SECRETS_SET_HELP = `braseh secrets set - Store an encrypted secret in the vault
 
 Usage:
-  dotts secrets set <name> <value>
+  braseh secrets set <name> <value>
 
 Arguments:
   name                           Name of the secret
@@ -175,26 +175,26 @@ Options:
   -h, --help                     Show this help message
 
 Examples:
-  dotts secrets set GH_TOKEN "ghp_xxxx"
-  dotts secrets set API_KEY "sk-xxxx"`;
+  braseh secrets set GH_TOKEN "ghp_xxxx"
+  braseh secrets set API_KEY "sk-xxxx"`;
 
-export const SECRETS_LIST_HELP = `dotts secrets list - List all secret names stored in the vault
+export const SECRETS_LIST_HELP = `braseh secrets list - List all secret names stored in the vault
 
 Usage:
-  dotts secrets list [options]
+  braseh secrets list [options]
 
 Options:
   --json                         Output secret names as structured JSON
   -h, --help                     Show this help message
 
 Examples:
-  dotts secrets list
-  dotts secrets list --json`;
+  braseh secrets list
+  braseh secrets list --json`;
 
-export const SECRETS_REMOVE_HELP = `dotts secrets remove - Delete a secret from the vault
+export const SECRETS_REMOVE_HELP = `braseh secrets remove - Delete a secret from the vault
 
 Usage:
-  dotts secrets remove <name>
+  braseh secrets remove <name>
 
 Arguments:
   name                           Name of the secret to delete
@@ -203,7 +203,7 @@ Options:
   -h, --help                     Show this help message
 
 Examples:
-  dotts secrets remove API_KEY`;
+  braseh secrets remove API_KEY`;
 
 export function getHelpText(command?: string, subcommand?: string): string {
   if (!command) {

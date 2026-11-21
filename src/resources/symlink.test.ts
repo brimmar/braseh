@@ -9,7 +9,7 @@ import { tmpdir } from 'os';
 import { rm, lstat, writeFile, mkdir } from 'fs/promises';
 
 describe('SymlinkResource', () => {
-  const testDir = join(tmpdir(), 'dotts-link-res-test-' + Math.random().toString(36).slice(2));
+  const testDir = join(tmpdir(), 'braseh-link-res-test-' + Math.random().toString(36).slice(2));
 
   it('should create a symlink at the specified path', async () => {
     const app = new App();

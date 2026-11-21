@@ -4,57 +4,57 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Effect } from 'effect';
-import { dottsApply, dryRunFileSystem } from './commands/apply';
+import { brasehApply, dryRunFileSystem } from './commands/apply';
 import { FileSystem, FileSystemLive } from './services/fs';
 import { SystemCommandLive } from './services/exec';
 
-describe('dotts apply', () => {
-  const testDir = join(tmpdir(), 'dotts-apply-test-' + Math.random().toString(36).slice(2));
+describe('braseh apply', () => {
+  const testDir = join(tmpdir(), 'braseh-apply-test-' + Math.random().toString(36).slice(2));
 
-  it('should load and validate a dotts.ts file', async () => {
-    const configPath = join(testDir, 'dotts-apply-ok.ts');
+  it('should load and validate a braseh.ts file', async () => {
+    const configPath = join(testDir, 'braseh-apply-ok.ts');
     await mkdir(testDir, { recursive: true });
     await writeFile(configPath, `
       export default () => {};
     `);
 
-    // Note: dottsApply is an async function that handles its own Effect running
+    // Note: brasehApply is an async function that handles its own Effect running
     // We expect it to work without additional wrapping
-    await dottsApply(configPath);
+    await brasehApply(configPath);
   });
 
-  it('should throw an error if dotts.ts is missing', async () => {
-    expect(dottsApply(join(testDir, 'non-existent.ts'))).rejects.toThrow();
+  it('should throw an error if braseh.ts is missing', async () => {
+    expect(brasehApply(join(testDir, 'non-existent.ts'))).rejects.toThrow();
   });
 
   it('dry-run of file() does not create the file', async () => {
-    const dir = join(tmpdir(), 'dotts-dry-run-file-' + Math.random().toString(36).slice(2));
+    const dir = join(tmpdir(), 'braseh-dry-run-file-' + Math.random().toString(36).slice(2));
     const target = join(dir, 'out.txt');
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await mkdir(dir, { recursive: true });
     await writeFile(
       configPath,
       `
-      import { file } from 'dotts';
+      import { file } from 'braseh';
       export default () => {
         file(${JSON.stringify(target)}, { content: 'hello' });
       };
     `,
     );
 
-    await dottsApply(configPath, { dryRun: true });
+    await brasehApply(configPath, { dryRun: true });
     expect(existsSync(target)).toBe(false);
   });
 
-  it('dry-run of file() does not write .dotts/state.json', async () => {
-    const dir = join(tmpdir(), 'dotts-dry-run-state-' + Math.random().toString(36).slice(2));
+  it('dry-run of file() does not write .braseh/state.json', async () => {
+    const dir = join(tmpdir(), 'braseh-dry-run-state-' + Math.random().toString(36).slice(2));
     const target = join(dir, 'out.txt');
-    const configPath = join(dir, 'dotts.ts');
+    const configPath = join(dir, 'braseh.ts');
     await mkdir(dir, { recursive: true });
     await writeFile(
       configPath,
       `
-      import { file } from 'dotts';
+      import { file } from 'braseh';
       export default () => {
         file(${JSON.stringify(target)}, { content: 'hello' });
       };
@@ -64,42 +64,42 @@ describe('dotts apply', () => {
     const prev = process.cwd();
     process.chdir(dir);
     try {
-      await dottsApply(configPath, { dryRun: true });
-      expect(existsSync(join(dir, '.dotts', 'state.json'))).toBe(false);
+      await brasehApply(configPath, { dryRun: true });
+      expect(existsSync(join(dir, '.braseh', 'state.json'))).toBe(false);
     } finally {
       process.chdir(prev);
     }
   });
 
   it('dry-run of script() does not evaluate unless', async () => {
-    const dir = join(tmpdir(), 'dotts-dry-run-script-' + Math.random().toString(36).slice(2));
-    const marker = join(dir, 'dotts-dry-run-should-not-run');
-    const configPath = join(dir, 'dotts.ts');
+    const dir = join(tmpdir(), 'braseh-dry-run-script-' + Math.random().toString(36).slice(2));
+    const marker = join(dir, 'braseh-dry-run-should-not-run');
+    const configPath = join(dir, 'braseh.ts');
     await mkdir(marker, { recursive: true });
     await writeFile(
       configPath,
       `
-      import { script } from 'dotts';
+      import { script } from 'braseh';
       export default () => {
         script('echo would-write', { unless: ${JSON.stringify(`rm -rf ${marker}`)} });
       };
     `,
     );
 
-    await dottsApply(configPath, { dryRun: true });
+    await brasehApply(configPath, { dryRun: true });
     expect(existsSync(marker)).toBe(true);
     await rm(dir, { recursive: true, force: true });
   });
 
   it('supports json mode and returns execution report', async () => {
-    const dir = join(tmpdir(), 'dotts-apply-json-' + Math.random().toString(36).slice(2));
-    const configPath = join(dir, 'dotts.ts');
+    const dir = join(tmpdir(), 'braseh-apply-json-' + Math.random().toString(36).slice(2));
+    const configPath = join(dir, 'braseh.ts');
     await mkdir(dir, { recursive: true });
     await writeFile(configPath, `
       export default () => {};
     `);
 
-    const result = await dottsApply(configPath, { json: true });
+    const result = await brasehApply(configPath, { json: true });
     expect(result.success).toBe(true);
     expect(result.command).toBe('apply');
     expect(result.summary).toBeDefined();
@@ -110,14 +110,14 @@ describe('dotts apply', () => {
   });
 
   it('supports verbose mode', async () => {
-    const dir = join(tmpdir(), 'dotts-apply-verbose-' + Math.random().toString(36).slice(2));
-    const configPath = join(dir, 'dotts.ts');
+    const dir = join(tmpdir(), 'braseh-apply-verbose-' + Math.random().toString(36).slice(2));
+    const configPath = join(dir, 'braseh.ts');
     await mkdir(dir, { recursive: true });
     await writeFile(configPath, `
       export default () => {};
     `);
 
-    const result = await dottsApply(configPath, { verbose: true });
+    const result = await brasehApply(configPath, { verbose: true });
     expect(result.success).toBe(true);
     await rm(dir, { recursive: true, force: true });
   });
@@ -125,7 +125,7 @@ describe('dotts apply', () => {
 
 describe('dryRunFileSystem', () => {
   it('exists is live and writeFile does not change contents', async () => {
-    const dir = join(tmpdir(), 'dotts-dry-fs-' + Math.random().toString(36).slice(2));
+    const dir = join(tmpdir(), 'braseh-dry-fs-' + Math.random().toString(36).slice(2));
     const filePath = join(dir, 'existing.txt');
     await mkdir(dir, { recursive: true });
     await writeFile(filePath, 'original');

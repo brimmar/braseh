@@ -8,8 +8,8 @@ import { tmpdir } from 'node:os';
 import { rm } from 'node:fs/promises';
 
 describe('StateService', () => {
-  const testDir = join(tmpdir(), 'dotts-state-test-' + Math.random().toString(36).slice(2));
-  const stateFile = join(testDir, '.dotts/state.json');
+  const testDir = join(tmpdir(), 'braseh-state-test-' + Math.random().toString(36).slice(2));
+  const stateFile = join(testDir, '.braseh/state.json');
 
   it('should save and load state', async () => {
     const program = Effect.gen(function* (_) {

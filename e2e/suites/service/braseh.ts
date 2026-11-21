@@ -1,6 +1,6 @@
 // E2E Service Suite — systemd service management
 // Requires: container with systemd as PID 1 + nginx pre-installed
-import { service, onPlatform } from 'dotts';
+import { service, onPlatform } from 'braseh';
 
 export default () => {
   onPlatform('linux', () => {

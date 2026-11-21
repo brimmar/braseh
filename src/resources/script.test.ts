@@ -164,7 +164,7 @@ describe('ScriptResource', () => {
     const stack = new Stack(app, 'test');
     const scriptRes = new ScriptResource(stack, 's1', {
       run: 'echo hello',
-      unless: 'rm -rf /tmp/dotts-dry-run-should-not-run',
+      unless: 'rm -rf /tmp/braseh-dry-run-should-not-run',
     });
 
     await Effect.runPromise(

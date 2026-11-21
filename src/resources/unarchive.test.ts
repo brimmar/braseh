@@ -9,7 +9,7 @@ import { tmpdir } from 'os';
 import { rm, mkdir, writeFile } from 'fs/promises';
 
 describe('UnarchiveResource', () => {
-  const testDir = join(tmpdir(), 'dotts-unarchive-test-' + Math.random().toString(36).slice(2));
+  const testDir = join(tmpdir(), 'braseh-unarchive-test-' + Math.random().toString(36).slice(2));
   const srcDir = join(testDir, 'src');
   const destDir = join(testDir, 'dest');
 

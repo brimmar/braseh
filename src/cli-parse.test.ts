@@ -20,7 +20,7 @@ describe('parseArgv', () => {
   });
 
   it("errors on ['secrets', 'remove'] without a name", () => {
-    expect(() => parseArgv(['secrets', 'remove'])).toThrow('Usage: dotts secrets remove <name>');
+    expect(() => parseArgv(['secrets', 'remove'])).toThrow('Usage: braseh secrets remove <name>');
   });
 
   it("parses ['--help'] and ['help'] as global help", () => {
@@ -32,7 +32,7 @@ describe('parseArgv', () => {
   it("parses contextual help for commands and subcommands", () => {
     expect(parseArgv(['apply', '--help'])).toEqual({ kind: 'help', command: 'apply' });
     expect(parseArgv(['apply', '-h'])).toEqual({ kind: 'help', command: 'apply' });
-    expect(parseArgv(['apply', 'dotts.ts', '--help'])).toEqual({ kind: 'help', command: 'apply' });
+    expect(parseArgv(['apply', 'braseh.ts', '--help'])).toEqual({ kind: 'help', command: 'apply' });
     expect(parseArgv(['help', 'apply'])).toEqual({ kind: 'help', command: 'apply' });
     expect(parseArgv(['check', '--help'])).toEqual({ kind: 'help', command: 'check' });
     expect(parseArgv(['doctor', '-h'])).toEqual({ kind: 'help', command: 'doctor' });
@@ -74,7 +74,7 @@ describe('parseArgv', () => {
     });
     expect(parseArgv(['apply', '-y'])).toEqual({
       kind: 'apply',
-      configPath: './dotts.ts',
+      configPath: './braseh.ts',
       dryRun: false,
       yes: true,
     });
@@ -115,13 +115,13 @@ describe('parseArgv', () => {
   it("parses ['apply', '--verbose'] and ['apply', '-v'] with verbose true", () => {
     expect(parseArgv(['apply', '--verbose'])).toEqual({
       kind: 'apply',
-      configPath: './dotts.ts',
+      configPath: './braseh.ts',
       dryRun: false,
       verbose: true,
     });
     expect(parseArgv(['apply', '-v'])).toEqual({
       kind: 'apply',
-      configPath: './dotts.ts',
+      configPath: './braseh.ts',
       dryRun: false,
       verbose: true,
     });
@@ -130,16 +130,16 @@ describe('parseArgv', () => {
   it("parses ['apply', '--json'] with json true", () => {
     expect(parseArgv(['apply', '--json'])).toEqual({
       kind: 'apply',
-      configPath: './dotts.ts',
+      configPath: './braseh.ts',
       dryRun: false,
       json: true,
     });
   });
 
   it("parses combined flags for apply", () => {
-    expect(parseArgv(['apply', 'my-dotts.ts', '-v', '--json', '--dry-run', '-y'])).toEqual({
+    expect(parseArgv(['apply', 'my-braseh.ts', '-v', '--json', '--dry-run', '-y'])).toEqual({
       kind: 'apply',
-      configPath: 'my-dotts.ts',
+      configPath: 'my-braseh.ts',
       dryRun: true,
       yes: true,
       verbose: true,
@@ -150,7 +150,7 @@ describe('parseArgv', () => {
   it("parses ['check', '--json'] with json true", () => {
     expect(parseArgv(['check', '--json'])).toEqual({
       kind: 'check',
-      configPath: './dotts.ts',
+      configPath: './braseh.ts',
       json: true,
     });
     expect(parseArgv(['check', 'custom.ts', '--json'])).toEqual({
