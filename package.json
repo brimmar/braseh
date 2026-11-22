@@ -1,6 +1,6 @@
 {
   "name": "braseh",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "description": "Declarative dotfiles for one machine, in TypeScript.",
   "type": "module",
   "main": "./dist/public.js",
