@@ -55,6 +55,7 @@ async function main() {
       } else if (request.kind === "check") {
         const result = await brasehCheck(request.configPath, {
           json: request.json,
+          yes: request.yes,
         });
         if (request.json) {
           process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -77,6 +78,11 @@ async function main() {
       } else if (request.kind === "secrets-get") {
         await brasehSecretGet(request.name);
       } else if (request.kind === "secrets-set") {
+        if (request.value !== undefined) {
+          p.log.warn(
+            "A value on the command line lands in shell history and is visible to other users in ps. Omit it to be prompted, or pipe it on stdin.",
+          );
+        }
         await brasehSecretSet(request.name, request.value);
       } else if (request.kind === "secrets-list") {
         const result = await brasehSecretList({ json: request.json });

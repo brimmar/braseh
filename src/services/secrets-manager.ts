@@ -58,16 +58,8 @@ export const SecretManagerLive = Layer.effect(
             return candidatePath;
           }
         }
-        let current = dirname(dir);
-        while (current && current !== dirname(current)) {
-          for (const candidate of ["vault", "secrets.vault", "secrets.json"]) {
-            const candidatePath = join(current, ".braseh", candidate);
-            if (yield* fs.exists(candidatePath)) {
-              return candidatePath;
-            }
-          }
-          current = dirname(current);
-        }
+        // No search in parent directories: from /tmp/braseh-xxxx that would reach /tmp/.braseh,
+        // which any local user can create.
         return configuredSecretsFile;
       });
 
@@ -261,19 +253,25 @@ export const SecretManagerLive = Layer.effect(
           const key = yield* getMasterKey(targetFile);
           const loaded = yield* loadSecrets(targetFile, key);
           yield* migrateIfLegacy(targetFile, loaded, key);
-          if (name in loaded.corruptLegacy) {
+          // Own keys only, so names like "toString" are not found on Object.prototype.
+          if (Object.hasOwn(loaded.corruptLegacy, name)) {
             return yield* Effect.fail(
               new Error(`Decryption failed: corrupt secret ${name}`),
             );
           }
-          const val = loaded.secrets[name];
-          if (val !== undefined) {
-            return val;
+          if (Object.hasOwn(loaded.secrets, name)) {
+            return loaded.secrets[name] as string;
           }
           return yield* Effect.fail(new Error(`Secret not found: ${name}`));
         }),
       set: (name, value) =>
         Effect.gen(function* () {
+          if (name === "__proto__") {
+            // Assigning it to a plain object changes the prototype instead of storing a value.
+            return yield* Effect.fail(
+              new Error('"__proto__" cannot be used as a secret name.'),
+            );
+          }
           const targetFile = yield* resolveSecretsPath();
           const key = yield* getMasterKey(targetFile);
           const loaded = yield* loadSecrets(targetFile, key);
@@ -298,11 +296,11 @@ export const SecretManagerLive = Layer.effect(
           const key = yield* getMasterKey(targetFile);
           const loaded = yield* loadSecrets(targetFile, key);
           let changed = false;
-          if (name in loaded.corruptLegacy) {
+          if (Object.hasOwn(loaded.corruptLegacy, name)) {
             delete loaded.corruptLegacy[name];
             changed = true;
           }
-          if (name in loaded.secrets) {
+          if (Object.hasOwn(loaded.secrets, name)) {
             delete loaded.secrets[name];
             changed = true;
           }

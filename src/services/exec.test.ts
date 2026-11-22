@@ -139,4 +139,10 @@ describe('buildSudoArgs', () => {
   it('leaves argv unchanged when become is falsy', () => {
     expect(buildSudoArgs('echo', ['hi'])).toEqual({ file: 'echo', args: ['hi'] });
   });
+
+  it('carries env through sudo with env, because env_reset would drop it', () => {
+    const result = buildSudoArgs('sh', ['-c', 'echo $FOO'], true, { FOO: 'bar' });
+    expect([result.file, ...result.args]).toEqual(['sudo', '--', 'env', 'FOO=bar', 'sh', '-c', 'echo $FOO']);
+    expect(buildSudoArgs('sh', ['-c', 'x'], undefined, { FOO: 'bar' })).toEqual({ file: 'sh', args: ['-c', 'x'] });
+  });
 });

@@ -31,6 +31,14 @@ export abstract class Resource<Props extends ResourceBaseProps = ResourceBasePro
   public readonly isResource = true;
   abstract readonly kind: string;
 
+  /**
+   * Set by apply() when the thing it manages was already on the system (a package, user,
+   * group, or running service). The runner records the first answer in state and carries it
+   * forward, and never destroys a preexisting resource that leaves the config.
+   * Left undefined by kinds that always own what they write.
+   */
+  public preexisting?: boolean;
+
   constructor(scope: Component, id: string, public readonly props: Props = {} as Props) {
     super(id);
     scope.add(this);

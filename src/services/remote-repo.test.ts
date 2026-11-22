@@ -38,6 +38,22 @@ describe('RemoteRepoService', () => {
       Effect.provide(Layer.succeed(FileSystem, FileSystem.of({ writeFileBytes: () => Effect.void } as any)))
     ));
 
-    expect(executedCommand).toContain('git clone https://github.com/brimmar/braseh.git /tmp/braseh');
+    expect(executedCommand).toContain('git clone -- https://github.com/brimmar/braseh.git /tmp/braseh');
+  });
+
+  it('passes a URL with shell metacharacters to git as one argument', async () => {
+    const calls: { file: string; args: string[] }[] = [];
+    const MockExec = Layer.succeed(SystemCommand, SystemCommand.of({
+      run: () => Effect.die('clone must not go through a shell'),
+      execFile: (file, args) => Effect.sync(() => { calls.push({ file, args }); return ''; }),
+    }));
+    const url = 'file:///x;echo INJECTED-$((6*7))';
+
+    await Effect.runPromise(Effect.gen(function* () {
+      const service = yield* RemoteRepoService;
+      yield* service.clone(url, '/tmp/dest');
+    }).pipe(Effect.provide(RemoteRepoServiceLive), Effect.provide(MockExec)));
+
+    expect(calls).toEqual([{ file: 'git', args: ['clone', '--', url, '/tmp/dest'] }]);
   });
 });

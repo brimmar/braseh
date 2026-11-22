@@ -20,13 +20,9 @@ export interface AptRepositoryProps {
   retryDelay?: number;
 }
 
-export const APT_UPDATE_ARGS = [
-  'update',
-  '-o',
-  'Acquire::Check-Valid-Until=false',
-  '-o',
-  'Acquire::Max-FutureTime=86400',
-];
+// Plain update. Valid-Until checks stay on: they stop replays of old signed metadata.
+// The e2e image sets its own clock-skew tolerance in /etc/apt/apt.conf.d.
+const APT_UPDATE_ARGS = ['update'];
 
 export class AptRepositoryResource extends Resource {
   override readonly kind = 'apt-repo' as const;
@@ -83,20 +79,21 @@ export class AptRepositoryResource extends Resource {
             }
             yield* fs.mkdir('/etc/apt/keyrings', { become });
             // Download key as raw bytes to prevent UTF-8 corruption of binary OpenPGP keyrings
-            const tempKeyPath = `/tmp/braseh-${name}.key`;
             const keyBytes = yield* http.downloadBytes(key);
-            yield* fs.writeFileBytes(tempKeyPath, keyBytes);
 
             // Check if it needs dearmoring (ASCII armored starts with -----BEGIN PGP PUBLIC KEY BLOCK-----)
             const textSample = new TextDecoder('utf-8', { fatal: false }).decode(keyBytes.slice(0, 128));
             const isArmored = textSample.includes('-----BEGIN PGP');
 
+            // The key goes in through stdin or fs, never a shared /tmp path another user could swap.
             if (isArmored) {
-              yield* exec.execFile('gpg', ['--dearmor', '--output', keyringPath, tempKeyPath], { become });
+              yield* exec.execFile('gpg', ['--batch', '--yes', '--dearmor', '--output', keyringPath], {
+                become,
+                stdin: keyBytes,
+              });
             } else {
-              yield* exec.execFile('cp', [tempKeyPath, keyringPath], { become });
+              yield* fs.writeFileBytes(keyringPath, keyBytes, { become, mode: 0o644 });
             }
-            yield* fs.rm(tempKeyPath);
             changed = true;
           }
         }
@@ -115,7 +112,6 @@ export class AptRepositoryResource extends Resource {
 
         // 3. Update apt
         if (changed) {
-          yield* sanitizeBrokenAptSources(fs, exec, become);
           yield* Effect.retry(
             exec.execFile('apt-get', APT_UPDATE_ARGS, { become }),
             Schedule.recurs(5).pipe(Schedule.addDelay(() => Duration.seconds(3))),
@@ -133,7 +129,6 @@ export class AptRepositoryResource extends Resource {
           removed = true;
         }
         if (removed) {
-          yield* sanitizeBrokenAptSources(fs, exec, become);
           yield* Effect.retry(
             exec.execFile('apt-get', APT_UPDATE_ARGS, { become }),
             Schedule.recurs(5).pipe(Schedule.addDelay(() => Duration.seconds(3))),
@@ -154,62 +149,10 @@ export class AptRepositoryResource extends Resource {
       const exec = yield* SystemCommand;
       yield* fs.rm(listPath, { become });
       yield* fs.rm(keyringPath, { become });
-      yield* sanitizeBrokenAptSources(fs, exec, become);
       yield* Effect.retry(
         exec.execFile('apt-get', APT_UPDATE_ARGS, { become }),
         Schedule.recurs(5).pipe(Schedule.addDelay(() => Duration.seconds(3))),
       );
     });
   }
-}
-
-function sanitizeBrokenAptSources(
-  fs: FileSystem,
-  exec: SystemCommand,
-  become?: boolean | string,
-) {
-  return Effect.gen(function* () {
-    const sourcesDir = '/etc/apt/sources.list.d';
-    const exists = yield* fs.exists(sourcesDir);
-    if (!exists) return;
-
-    const result = yield* Effect.match(
-      exec.execFile('find', [sourcesDir, '-maxdepth', '1', '-name', '*.list'], { intent: 'read' }),
-      {
-        onFailure: () => '',
-        onSuccess: (out) => out,
-      },
-    );
-
-    const listFiles = result.split('\n').map((l) => l.trim()).filter(Boolean);
-    for (const file of listFiles) {
-      const content = yield* Effect.match(
-        fs.readFile(file),
-        {
-          onFailure: () => '',
-          onSuccess: (c) => c,
-        },
-      );
-
-      const match = content.match(/signed-by=([^\s\]]+)/);
-      if (match && match[1]) {
-        const keyring = match[1];
-        const keyringExists = yield* fs.exists(keyring);
-        let keyringValid = false;
-        if (keyringExists) {
-          keyringValid = yield* Effect.match(
-            exec.execFile('gpg', ['--show-keys', keyring], { intent: 'read' }),
-            {
-              onFailure: () => false,
-              onSuccess: () => true,
-            },
-          );
-        }
-
-        if (!keyringExists || !keyringValid) {
-          yield* fs.rm(file, { become });
-        }
-      }
-    }
-  });
 }

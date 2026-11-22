@@ -37,6 +37,7 @@ export class GroupResource extends Resource {
       const exists = yield* this.checkExists(name, exec);
 
       if (state === 'present') {
+        this.preexisting = exists;
         if (!exists) {
           const args: string[] = [];
           if (gid !== undefined) args.push('--gid', String(gid));

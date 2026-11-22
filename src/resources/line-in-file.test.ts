@@ -71,4 +71,18 @@ describe('LineInFileResource', () => {
     
     expect(files['/tmp/test.txt']).toBe('line1\nline2');
   });
+
+  it('keeps the final newline when appending', async () => {
+    const files: Record<string, string> = { '/tmp/rc': 'a\nb\n' };
+    const stack = new Stack(new App(), 'test');
+    await Effect.runPromise(new LineInFileResource(stack, 'l', { path: '/tmp/rc', line: 'new' }).apply().pipe(Effect.provide(MockFS(files))));
+    expect(files['/tmp/rc']).toBe('a\nb\nnew\n');
+  });
+
+  it('writes a missing file as the line plus a newline', async () => {
+    const files: Record<string, string> = {};
+    const stack = new Stack(new App(), 'test');
+    await Effect.runPromise(new LineInFileResource(stack, 'l', { path: '/tmp/new-rc', line: 'only' }).apply().pipe(Effect.provide(MockFS(files))));
+    expect(files['/tmp/new-rc']).toBe('only\n');
+  });
 });

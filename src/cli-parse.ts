@@ -8,7 +8,7 @@ export type CliRequest =
   | { kind: "version"; json?: boolean }
   | { kind: "init"; projectDir: string; force: boolean }
   | { kind: "prepare"; dir: string }
-  | { kind: "check"; configPath: string; json?: boolean }
+  | { kind: "check"; configPath: string; json?: boolean; yes?: boolean }
   | { kind: "doctor"; json?: boolean }
   | {
       kind: "apply";
@@ -19,7 +19,7 @@ export type CliRequest =
       json?: boolean;
     }
   | { kind: "secrets-get"; name: string }
-  | { kind: "secrets-set"; name: string; value: string }
+  | { kind: "secrets-set"; name: string; value?: string }
   | { kind: "secrets-list"; json?: boolean }
   | { kind: "secrets-remove"; name: string };
 
@@ -117,11 +117,12 @@ export function parseArgv(argv: string[]): CliRequest {
   }
 
   if (command === "check") {
-    const { positional, flags } = takeArgs(argv.slice(1), ["--json"]);
+    const { positional, flags } = takeArgs(argv.slice(1), ["--json", "--yes", "-y"]);
     return {
       kind: "check",
       configPath: positional || "./braseh.ts",
       ...(flags.has("--json") ? { json: true } : {}),
+      ...(flags.has("--yes") || flags.has("-y") ? { yes: true } : {}),
     };
   }
 
@@ -167,10 +168,11 @@ export function parseArgv(argv: string[]): CliRequest {
     if (action === "set") {
       const name = argv[2];
       const value = argv[3];
-      if (!name || !value) {
-        throw new Error("Usage: braseh secrets set <name> <value>");
+      if (!name) {
+        throw new Error("Usage: braseh secrets set <name> [value]");
       }
-      return { kind: "secrets-set", name, value };
+      // Without a value, the CLI prompts or reads stdin, which keeps it out of shell history and ps.
+      return { kind: "secrets-set", name, ...(value ? { value } : {}) };
     }
     if (action === "list") {
       const { flags } = takeArgs(argv.slice(2), ["--json"]);

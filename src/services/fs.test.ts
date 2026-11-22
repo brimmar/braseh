@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
-import { existsSync, readFileSync, statSync } from 'fs';
-import { rm, stat } from 'fs/promises';
+import { existsSync, lstatSync, readFileSync, readlinkSync, statSync } from 'fs';
+import { mkdir, rm, stat, symlink, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { basename, dirname, join, resolve } from 'path';
 import { Effect, Layer } from 'effect';
@@ -321,8 +321,9 @@ describe('FileSystem Service', () => {
     await Effect.runPromise(program.pipe(Effect.provide(FileSystemLive), Effect.provide(MockExec)));
 
     expect(calls).toEqual([
+      { file: 'readlink', args: ['--', linkPath] },
       { file: 'mkdir', args: ['-p', '--', dirname(linkPath)] },
-      { file: 'ln', args: ['-sf', '--', '/the-target', linkPath] },
+      { file: 'ln', args: ['-sfn', '--', '/the-target', linkPath] },
     ]);
   });
 
@@ -364,6 +365,7 @@ describe('FileSystem Service', () => {
       SystemCommand.of({
         run: () => Effect.succeed(''),
         execFile: (file, args, opts) => {
+          if (file === 'test') return Effect.fail(new Error('missing'));
           calls.push({ file, args, become: opts?.become });
           if (file === 'install') {
             const dash = args.indexOf('--');
@@ -410,6 +412,7 @@ describe('FileSystem Service', () => {
       SystemCommand.of({
         run: () => Effect.succeed(''),
         execFile: (file, args, opts) => {
+          if (file === 'test') return Effect.fail(new Error('missing'));
           calls.push({ file, args, become: opts?.become });
           if (file === 'install') {
             const dash = args.indexOf('--');
@@ -454,6 +457,7 @@ describe('FileSystem Service', () => {
       SystemCommand.of({
         run: () => Effect.succeed(''),
         execFile: (file, args, opts) => {
+          if (file === 'test') return Effect.fail(new Error('missing'));
           calls.push({ file, args, become: opts?.become });
           return Effect.succeed('');
         },
@@ -501,6 +505,7 @@ describe('FileSystem Service', () => {
       SystemCommand.of({
         run: () => Effect.succeed(''),
         execFile: (file, args) => {
+          if (file === 'test') return Effect.fail(new Error('missing'));
           calls.push({ file, args });
           return Effect.succeed('');
         },
@@ -521,6 +526,172 @@ describe('FileSystem Service', () => {
     expect(calls[0]?.args[2]).toBe('--');
     expect(calls[0]?.args[4]).toBe(filePath);
     expect(calls).toHaveLength(1);
+  });
+
+  const recordingExec = (
+    calls: { file: string; args: string[]; opts?: Record<string, unknown> }[],
+    respond: (file: string, args: string[]) => Effect.Effect<string, Error> = () => Effect.succeed(''),
+  ) =>
+    Layer.succeed(
+      SystemCommand,
+      SystemCommand.of({
+        run: () => Effect.succeed(''),
+        execFile: (file, args, opts) => {
+          calls.push({ file, args, opts: opts as Record<string, unknown> | undefined });
+          return respond(file, args);
+        },
+      }),
+    );
+
+  it('should cp onto an existing file with become, keeping its mode, owner and symlink', async () => {
+    const calls: { file: string; args: string[]; opts?: Record<string, unknown> }[] = [];
+    const filePath = join(testDir, 'shadow');
+    const program = Effect.gen(function* () {
+      const fs = yield* FileSystem;
+      yield* fs.writeFile(filePath, 'new', { become: 'alice' });
+    });
+
+    await Effect.runPromise(program.pipe(Effect.provide(FileSystemLive), Effect.provide(recordingExec(calls))));
+
+    const ops = calls.map((c) => c.file);
+    expect(ops).toEqual(['test', 'cp']);
+    expect(calls[1]?.args.slice(-1)).toEqual([filePath]);
+  });
+
+  it('should chmod an existing file before cp when become and mode are set', async () => {
+    const calls: { file: string; args: string[]; opts?: Record<string, unknown> }[] = [];
+    const filePath = join(testDir, 'key');
+    const program = Effect.gen(function* () {
+      const fs = yield* FileSystem;
+      yield* fs.writeFile(filePath, 'secret', { become: true, mode: 0o600 });
+    });
+
+    await Effect.runPromise(program.pipe(Effect.provide(FileSystemLive), Effect.provide(recordingExec(calls))));
+
+    expect(calls.map((c) => [c.file, ...c.args.slice(0, 1)])).toEqual([['test', '-e'], ['chmod', '600'], ['cp', '--']]);
+  });
+
+  it('should tighten an existing file to the requested mode before writing without become', async () => {
+    const filePath = join(testDir, 'loose.txt');
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        yield* fs.mkdir(testDir);
+        yield* fs.writeFile(filePath, 'public', { mode: 0o644 });
+        yield* fs.chmod(filePath, 0o644);
+        yield* fs.writeFile(filePath, 'secret', { mode: 0o600 });
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(SystemCommandLive)),
+    );
+    expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+    expect(readFileSync(filePath, 'utf8')).toBe('secret');
+  });
+
+  it('should read with become untrimmed', async () => {
+    const calls: { file: string; args: string[]; opts?: Record<string, unknown> }[] = [];
+    const content = await Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        return yield* fs.readFile('/etc/hosts', { become: true });
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(recordingExec(calls, () => Effect.succeed('  a\nb\n')))),
+    );
+    expect(calls[0]?.opts?.raw).toBe(true);
+    expect(content).toBe('  a\nb\n');
+  });
+
+  it('should chown with become without touching the id that was not given', async () => {
+    const calls: { file: string; args: string[]; opts?: Record<string, unknown> }[] = [];
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        yield* fs.chown('/etc/foo', -1, 27, { become: true });
+        yield* fs.chown('/etc/foo', 1000, -1, { become: true });
+        yield* fs.chown('/etc/foo', 1000, 27, { become: true });
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(recordingExec(calls))),
+    );
+    expect(calls.map((c) => c.args[0])).toEqual([':27', '1000', '1000:27']);
+  });
+
+  it('should chown with -1 for the uid without become', async () => {
+    const filePath = join(testDir, 'chown-gid-only.txt');
+    const gid = process.getgid?.() ?? 0;
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        yield* fs.mkdir(testDir);
+        yield* fs.writeFile(filePath, 'x');
+        yield* fs.chown(filePath, -1, gid);
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(SystemCommandLive)),
+    );
+    expect(statSync(filePath).gid).toBe(gid);
+  });
+
+  it('should refuse to replace a real directory with a symlink unless forced', async () => {
+    const linkPath = join(testDir, 'nvim');
+    const source = join(testDir, 'dotfiles-nvim');
+    await mkdir(join(linkPath), { recursive: true });
+    await mkdir(source, { recursive: true });
+    await writeFile(join(linkPath, 'init.lua'), 'my local config');
+    const link = (force?: boolean) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        yield* fs.symlink(source, linkPath, { force });
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(SystemCommandLive));
+
+    await expect(Effect.runPromise(link())).rejects.toThrow(/force: true/);
+    expect(readFileSync(join(linkPath, 'init.lua'), 'utf8')).toBe('my local config');
+
+    await Effect.runPromise(link(true));
+    expect(lstatSync(linkPath).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(linkPath)).toBe(source);
+  });
+
+  it('should leave a correct symlink alone and replace a wrong one', async () => {
+    const linkPath = join(testDir, 'relink');
+    const other = join(testDir, 'other-target');
+    const source = join(testDir, 'right-target');
+    await mkdir(source, { recursive: true });
+    await mkdir(other, { recursive: true });
+    const link = () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem;
+        yield* fs.symlink(source, linkPath);
+      }).pipe(Effect.provide(FileSystemLive), Effect.provide(SystemCommandLive));
+
+    await symlink(other, linkPath);
+    await Effect.runPromise(link());
+    expect(readlinkSync(linkPath)).toBe(source);
+
+    const before = lstatSync(linkPath).ino;
+    await Effect.runPromise(link());
+    expect(lstatSync(linkPath).ino).toBe(before);
+    // ln -sf without -n would have created right-target/right-target here.
+    expect(existsSync(join(source, 'right-target'))).toBe(false);
+  });
+
+  it('should refuse a real file at a become symlink path unless forced, and skip a correct link', async () => {
+    const notALink = (file: string) =>
+      file === 'readlink' ? Effect.fail(new Error('not a link')) : Effect.succeed('');
+    const run = (calls: { file: string; args: string[] }[], respond: typeof notALink, force?: boolean) =>
+      Effect.runPromise(
+        Effect.either(
+          Effect.gen(function* () {
+            const fs = yield* FileSystem;
+            yield* fs.symlink('/the-target', '/etc/thing', { become: true, force });
+          }).pipe(Effect.provide(FileSystemLive), Effect.provide(recordingExec(calls, respond))),
+        ),
+      );
+
+    const refused: { file: string; args: string[] }[] = [];
+    expect((await run(refused, notALink))._tag).toBe('Left');
+    expect(refused.map((c) => c.file)).toEqual(['readlink', 'test']);
+
+    const forced: { file: string; args: string[] }[] = [];
+    expect((await run(forced, notALink, true))._tag).toBe('Right');
+    expect(forced.map((c) => c.file)).toEqual(['readlink', 'test', 'rm', 'mkdir', 'ln']);
+
+    const same: { file: string; args: string[] }[] = [];
+    await run(same, () => Effect.succeed('/the-target'));
+    expect(same.map((c) => c.file)).toEqual(['readlink']);
   });
 
   it('should pass mode to NodeFS.writeFile when set without become', async () => {

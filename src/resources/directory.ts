@@ -35,9 +35,7 @@ export class DirectoryResource extends Resource {
       }
 
       if (this.props.uid !== undefined || this.props.gid !== undefined) {
-        const uid = this.props.uid ?? process.getuid!();
-        const gid = this.props.gid ?? process.getgid!();
-        yield* fs.chown(this.props.path, uid, gid, { become: this.props.become });
+        yield* fs.chown(this.props.path, this.props.uid ?? -1, this.props.gid ?? -1, { become: this.props.become });
       }
     });
   }

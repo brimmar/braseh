@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Option } from 'effect';
 import * as NodeFS from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
@@ -13,7 +13,11 @@ export interface FileSystem {
   readonly readFile: (path: string, options?: { become?: boolean | string }) => Effect.Effect<string, Error>;
   readonly exists: (path: string, options?: { become?: boolean | string }) => Effect.Effect<boolean, Error>;
   readonly mkdir: (path: string, options?: { become?: boolean | string }) => Effect.Effect<void, Error>;
-  readonly symlink: (target: string, path: string, options?: { become?: boolean | string }) => Effect.Effect<void, Error>;
+  readonly symlink: (
+    target: string,
+    path: string,
+    options?: { become?: boolean | string; force?: boolean },
+  ) => Effect.Effect<void, Error>;
   readonly rm: (path: string, options?: { become?: boolean | string }) => Effect.Effect<void, Error>;
   readonly rmdir: (path: string, options?: { become?: boolean | string }) => Effect.Effect<void, Error>;
   readonly unlink: (path: string, options?: { become?: boolean | string }) => Effect.Effect<void, Error>;
@@ -93,6 +97,22 @@ function namedBecomeUser(become: boolean | string | undefined): string | undefin
   return undefined;
 }
 
+function isMissing(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
+}
+
+/** Tighten an existing file before new content lands in it. A missing file is fine. */
+async function chmodIfExists(path: string, mode: number | undefined): Promise<void> {
+  if (mode === undefined) return;
+  await NodeFS.chmod(path, mode).catch((error) => (isMissing(error) ? undefined : Promise.reject(error)));
+}
+
+function existingRefusal(path: string): Error {
+  return new Error(
+    `${path} already exists and is not a symlink. Move it away, or pass force: true to delete it and link in its place.`,
+  );
+}
+
 function copyViaTemp(
   exec: SystemCommand,
   dest: string,
@@ -100,6 +120,7 @@ function copyViaTemp(
   options?: WriteFileOptions,
 ) {
   const asRoot = { become: true as const };
+  const asRootRead = { become: true as const, intent: 'read' as const };
 
   return Effect.acquireUseRelease(
     Effect.tryPromise({
@@ -113,6 +134,19 @@ function copyViaTemp(
     }),
     ({ temp }) =>
       Effect.gen(function* () {
+        const existed = yield* exec.execFile('test', ['-e', dest], asRootRead).pipe(
+          Effect.as(true),
+          Effect.orElseSucceed(() => false),
+        );
+        if (existed) {
+          // cp onto an existing file truncates it in place, so its mode, owner
+          // and symlinks survive (install would reset them to 0644 root:root).
+          if (options?.mode !== undefined) {
+            yield* exec.execFile('chmod', [options.mode.toString(8), '--', dest], asRoot);
+          }
+          yield* exec.execFile('cp', ['--', temp, dest], asRoot);
+          return;
+        }
         // install -m sets dest mode in the same root step so a 0o600 file
         // is never world-readable between cp and chmod.
         yield* exec.execFile(
@@ -155,14 +189,16 @@ export const FileSystemLive = Layer.effect(
         const resolved = resolvePath(path);
         return wrap(
           options,
-          () =>
-            NodeFS.writeFile(
+          async () => {
+            await chmodIfExists(resolved, options?.mode);
+            await NodeFS.writeFile(
               resolved,
               content,
               options?.mode !== undefined
                 ? { encoding: 'utf-8', mode: options.mode }
                 : 'utf-8',
-            ),
+            );
+          },
           (exec) => copyViaTemp(exec, resolved, content, options),
           (error) => `Failed to write file ${resolved}: ${String(error)}`
         );
@@ -171,12 +207,14 @@ export const FileSystemLive = Layer.effect(
         const resolved = resolvePath(path);
         return wrap(
           options,
-          () =>
-            NodeFS.writeFile(
+          async () => {
+            await chmodIfExists(resolved, options?.mode);
+            await NodeFS.writeFile(
               resolved,
               content,
               options?.mode !== undefined ? { mode: options.mode } : undefined,
-            ),
+            );
+          },
           (exec) => copyViaTemp(exec, resolved, content, options),
           (error) => `Failed to write file ${resolved}: ${String(error)}`
         );
@@ -186,7 +224,7 @@ export const FileSystemLive = Layer.effect(
         return wrap(
           options,
           () => NodeFS.readFile(resolved, 'utf-8'),
-          (exec) => exec.execFile('cat', ['--', resolved], options),
+          (exec) => exec.execFile('cat', ['--', resolved], { ...options, raw: true }),
           (error) => `Failed to read file ${resolved}: ${String(error)}`
         );
       },
@@ -225,19 +263,45 @@ export const FileSystemLive = Layer.effect(
           target === '~' || target.startsWith('~/') || target.startsWith('~\\')
             ? `${homedir()}${target.slice(1)}`
             : target;
+        const asUser = { become: options?.become };
         return wrap(
           options,
           async () => {
             await NodeFS.mkdir(dirname(resolvedPath), { recursive: true });
-            try {
+            const current = await NodeFS.lstat(resolvedPath).catch((error) =>
+              isMissing(error) ? undefined : Promise.reject(error),
+            );
+            if (current?.isSymbolicLink()) {
+              if ((await NodeFS.readlink(resolvedPath)) === resolvedTarget) return;
+              await NodeFS.unlink(resolvedPath);
+            } else if (current) {
+              if (!options?.force) throw existingRefusal(resolvedPath);
               await NodeFS.rm(resolvedPath, { recursive: true, force: true });
-            } catch {}
+            }
             await NodeFS.symlink(resolvedTarget, resolvedPath);
           },
           (exec) =>
             Effect.gen(function* () {
-              yield* exec.execFile('mkdir', ['-p', '--', dirname(resolvedPath)], options);
-              yield* exec.execFile('ln', ['-sf', '--', resolvedTarget, resolvedPath], options);
+              const current = yield* exec
+                .execFile('readlink', ['--', resolvedPath], { ...asUser, intent: 'read' })
+                .pipe(Effect.option);
+              if (Option.isSome(current)) {
+                if (current.value === resolvedTarget) return;
+              } else {
+                const exists = yield* exec
+                  .execFile('test', ['-e', resolvedPath], { ...asUser, intent: 'read' })
+                  .pipe(
+                    Effect.as(true),
+                    Effect.orElseSucceed(() => false),
+                  );
+                if (exists) {
+                  if (!options?.force) return yield* Effect.fail(existingRefusal(resolvedPath));
+                  yield* exec.execFile('rm', ['-rf', '--', resolvedPath], asUser);
+                }
+              }
+              yield* exec.execFile('mkdir', ['-p', '--', dirname(resolvedPath)], asUser);
+              // -n: replace an existing link instead of following it into the directory it points at.
+              yield* exec.execFile('ln', ['-sfn', '--', resolvedTarget, resolvedPath], asUser);
             }),
           (error) => `Failed to create symlink ${resolvedPath} -> ${resolvedTarget}: ${String(error)}`
         );
@@ -318,7 +382,10 @@ export const FileSystemLive = Layer.effect(
           options,
           () => NodeFS.chown(resolved, uid, gid),
           (exec) =>
-            exec.execFile('chown', [`${uid}:${gid}`, '--', resolved], options).pipe(Effect.map(() => undefined)),
+            // -1 leaves that id alone, like chown(2). `uid:` would also reset the group.
+            exec
+              .execFile('chown', [uid === -1 ? `:${gid}` : gid === -1 ? `${uid}` : `${uid}:${gid}`, '--', resolved], options)
+              .pipe(Effect.map(() => undefined)),
           (error) => `Failed to chown ${resolved} to ${uid}:${gid}: ${String(error)}`
         );
       },

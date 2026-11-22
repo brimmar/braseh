@@ -11,6 +11,7 @@ import { FileSystemLive } from "../services/fs";
 import { HttpServiceLive } from "../services/http";
 import { PlatformServiceLive } from "../services/platform";
 import {
+  confirmRemoteConfig,
   RemoteRepoService,
   RemoteRepoServiceLive,
 } from "../services/remote-repo";
@@ -62,6 +63,7 @@ async function typecheckProject(
 
 export interface CheckOptions {
   json?: boolean;
+  yes?: boolean;
 }
 
 export interface CheckResult {
@@ -82,6 +84,7 @@ export async function brasehCheck(
 
     if (remoteRepo.isRemote(configPath)) {
       const url = yield* remoteRepo.resolve(configPath);
+      yield* confirmRemoteConfig(url, options.yes);
 
       return yield* tempDir.use((dir) =>
         Effect.gen(function* () {

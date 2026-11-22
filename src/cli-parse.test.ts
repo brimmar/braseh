@@ -173,4 +173,13 @@ describe('parseArgv', () => {
       json: true,
     });
   });
+
+  it("parses ['secrets', 'set', 'FOO'] without a value so the CLI can prompt or read stdin", () => {
+    expect(parseArgv(['secrets', 'set', 'FOO'])).toEqual({ kind: 'secrets-set', name: 'FOO' });
+  });
+
+  it("parses ['check', 'user/repo', '--yes'] with yes true", () => {
+    expect(parseArgv(['check', 'user/repo', '--yes'])).toEqual({ kind: 'check', configPath: 'user/repo', yes: true });
+    expect(parseArgv(['check', '-y'])).toEqual({ kind: 'check', configPath: './braseh.ts', yes: true });
+  });
 });

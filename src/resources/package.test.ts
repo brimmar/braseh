@@ -261,4 +261,79 @@ describe('PackageResource', () => {
     expect(pPacman.concurrencyKey).toBe('pkg-manager-system');
     expect(pCargo.concurrencyKey).toBe('pkg-manager-cargo');
   });
+
+  const recordExec = (commands: [string, string[]][], respond: (file: string, args: string[]) => string | Error) =>
+    Layer.succeed(SystemCommand, SystemCommand.of({
+      run: () => Effect.succeed(''),
+      execFile: (file, args) => {
+        commands.push([file, args]);
+        const out = respond(file, args);
+        return out instanceof Error ? Effect.fail(out) : Effect.succeed(out);
+      },
+    }));
+
+  it('reinstalls an apt package that was removed but left config files', async () => {
+    const stack = new Stack(new App(), 'test');
+    const commands: [string, string[]][] = [];
+    const res = new PackageResource(stack, 'pkg:htop', { name: 'htop', manager: 'apt' });
+    await Effect.runPromise(res.apply().pipe(
+      Effect.provide(recordExec(commands, (file) =>
+        file === 'dpkg' ? 'Package: htop\nStatus: deinstall ok config-files\nVersion: 3.3.0-4' : '')),
+      Effect.provide(PlatformMock),
+    ));
+    expect(commands).toContainEqual(['apt-get', ['install', '-y', 'htop']]);
+    expect(res.preexisting).toBe(false);
+  });
+
+  it('marks an already-installed package as preexisting', async () => {
+    const stack = new Stack(new App(), 'test');
+    const res = new PackageResource(stack, 'pkg:git', { name: 'git', manager: 'apt' });
+    await Effect.runPromise(res.apply().pipe(
+      Effect.provide(recordExec([], (file) => (file === 'dpkg' ? 'Package: git\nStatus: install ok installed\n' : ''))),
+      Effect.provide(PlatformMock),
+    ));
+    expect(res.preexisting).toBe(true);
+  });
+
+  it('finds bun globals by package name and version, not by binary name', async () => {
+    const listing = '/home/u/.bun/install/global node_modules (2)\n├── @biomejs/biome@2.5.12\n└── typescript@5.4.5';
+    const run = async (name: string, version?: string) => {
+      const commands: [string, string[]][] = [];
+      const stack = new Stack(new App(), 'test');
+      await Effect.runPromise(new PackageResource(stack, `pkg:${name}`, { name, version, manager: 'bun' }).apply().pipe(
+        Effect.provide(recordExec(commands, (file, args) => (args[0] === 'pm' ? listing : ''))),
+        Effect.provide(PlatformMock),
+      ));
+      return commands.some(([file, args]) => file === 'bun' && args[0] === 'add');
+    };
+    expect(await run('typescript')).toBe(false);
+    expect(await run('@biomejs/biome')).toBe(false);
+    expect(await run('typescript', '5.4.5')).toBe(false);
+    expect(await run('typescript', '5.5.0')).toBe(true);
+    expect(await run('script')).toBe(true);
+  });
+
+  it("uninstalls an installed package when state is 'absent', and does nothing once it is gone", async () => {
+    const run = async (dpkgStatus: string) => {
+      const commands: [string, string[]][] = [];
+      const stack = new Stack(new App(), 'test');
+      await Effect.runPromise(new PackageResource(stack, 'pkg:toilet', { name: 'toilet', manager: 'apt', state: 'absent' }).apply().pipe(
+        Effect.provide(recordExec(commands, (file) => (file === 'dpkg' ? `Package: toilet\nStatus: ${dpkgStatus}\n` : ''))),
+        Effect.provide(PlatformMock),
+      ));
+      return commands.filter(([file]) => file === 'apt-get');
+    };
+    expect(await run('install ok installed')).toEqual([['apt-get', ['remove', '-y', 'toilet']]]);
+    expect(await run('deinstall ok config-files')).toEqual([]);
+  });
+
+  it("does nothing on destroy of a state: 'absent' declaration", async () => {
+    const commands: [string, string[]][] = [];
+    const stack = new Stack(new App(), 'test');
+    await Effect.runPromise(new PackageResource(stack, 'pkg:toilet', { name: 'toilet', manager: 'apt', state: 'absent' }).destroy().pipe(
+      Effect.provide(recordExec(commands, () => '')),
+      Effect.provide(PlatformMock),
+    ));
+    expect(commands).toEqual([]);
+  });
 });

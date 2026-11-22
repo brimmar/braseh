@@ -12,4 +12,12 @@ describe('TemplateService', () => {
     const result = await Effect.runPromise(Effect.provide(program, TemplateServiceLive));
     expect(result).toBe('Hello World!');
   });
+
+  it('does not HTML-escape values, since the output is a config file', async () => {
+    const result = await Effect.runPromise(Effect.provide(
+      Effect.flatMap(TemplateService, (svc) => svc.render('{{url}} {{q}}', { url: 'https://x.io/p?a=1&b=2', q: `"it's"` })),
+      TemplateServiceLive,
+    ));
+    expect(result).toBe(`https://x.io/p?a=1&b=2 "it's"`);
+  });
 });

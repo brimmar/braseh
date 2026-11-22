@@ -6,10 +6,23 @@ import { FileSystemLive } from "../services/fs";
 import { SecretStoreLive } from "../services/secrets";
 import { SecretManager, SecretManagerLive } from "../services/secrets-manager";
 
-export async function brasehSecretSet(name: string, value: string) {
+/** Prompt on a terminal, otherwise read stdin (one trailing newline dropped, as from echo). */
+async function readSecretValue(name: string): Promise<string> {
+  if (process.stdin.isTTY) {
+    const value = await p.password({ message: `Value for ${name}:` });
+    if (p.isCancel(value) || !value) throw new Error("No secret value given.");
+    return value;
+  }
+  const value = (await Bun.stdin.text()).replace(/\r?\n$/, "");
+  if (!value) throw new Error("No secret value on stdin.");
+  return value;
+}
+
+export async function brasehSecretSet(name: string, value?: string) {
+  const secretValue = value ?? (await readSecretValue(name));
   const program = Effect.gen(function* (_) {
     const sm = yield* _(SecretManager);
-    yield* _(sm.set(name, value));
+    yield* _(sm.set(name, secretValue));
     p.log.success(pc.green(`Secret '${name}' set successfully.`));
   });
 

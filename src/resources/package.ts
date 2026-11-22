@@ -12,6 +12,7 @@ export interface PackageResourceProps {
   name: string;
   manager?: PackageManager;
   version?: string;
+  state?: 'present' | 'absent';
   dependsOn?: Component[];
   become?: boolean | string;
   retries?: number;
@@ -43,7 +44,15 @@ export class PackageResource extends Resource {
       const manager = yield* this.resolveManager(platform);
       const provider = this.getProvider(manager);
       
+      if (this.props.state === 'absent') {
+        if (yield* provider.isInstalled(name)) {
+          yield* provider.uninstall(name, { become: this.props.become });
+        }
+        return;
+      }
+
       const alreadyInstalled = yield* provider.isInstalled(name, version);
+      this.preexisting = alreadyInstalled;
       if (alreadyInstalled) {
         return;
       }
@@ -54,6 +63,8 @@ export class PackageResource extends Resource {
 
   destroy() {
     const { name } = this.props;
+    // Dropping a state: 'absent' declaration leaves nothing to undo. Reinstalling would surprise.
+    if (this.props.state === 'absent') return Effect.void;
     return Effect.gen(this, function* () {
       const platform = yield* PlatformService;
       const manager = yield* this.resolveManager(platform);

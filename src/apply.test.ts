@@ -147,4 +147,34 @@ describe('dryRunFileSystem', () => {
     expect(result.content).toBe('original');
     expect(readFileSync(filePath, 'utf8')).toBe('original');
   });
+
+  it('keeps state next to each config, so applying one config never destroys another', async () => {
+    const root = join(tmpdir(), 'braseh-two-configs-' + Math.random().toString(36).slice(2));
+    const dirA = join(root, 'a');
+    const dirB = join(root, 'b');
+    const fileA = join(root, 'from-a.txt');
+    const fileB = join(root, 'from-b.txt');
+    await mkdir(dirA, { recursive: true });
+    await mkdir(dirB, { recursive: true });
+    const config = (target: string) => `import { file } from 'braseh';
+export default () => { file(${JSON.stringify(target)}, { content: 'x' }); };`;
+    await writeFile(join(dirA, 'braseh.ts'), config(fileA));
+    await writeFile(join(dirB, 'braseh.ts'), config(fileB));
+
+    const prev = process.cwd();
+    process.chdir(dirA);
+    try {
+      await brasehApply(join(dirA, 'braseh.ts'), { json: true });
+      // Before the fix this used a/.braseh/state.json and deleted from-a.txt.
+      await brasehApply(join(dirB, 'braseh.ts'), { json: true });
+    } finally {
+      process.chdir(prev);
+    }
+
+    expect(existsSync(fileA)).toBe(true);
+    expect(existsSync(fileB)).toBe(true);
+    expect(Object.keys(JSON.parse(readFileSync(join(dirA, '.braseh', 'state.json'), 'utf8')))).toEqual([`file:${fileA}`]);
+    expect(Object.keys(JSON.parse(readFileSync(join(dirB, '.braseh', 'state.json'), 'utf8')))).toEqual([`file:${fileB}`]);
+    await rm(root, { recursive: true, force: true });
+  });
 });

@@ -57,7 +57,7 @@ export class UnarchiveResource extends Resource {
 
         flags += 'f';
 
-        const tarArgs = [flags, resolvedSrc, '-C', resolvedDest];
+        const tarArgs = [flags, resolvedSrc, '-C', resolvedDest, '--no-same-owner', '--no-same-permissions'];
         if (stripComponents > 0) {
           tarArgs.push(`--strip-components=${stripComponents}`);
         }
@@ -72,9 +72,7 @@ export class UnarchiveResource extends Resource {
       }
 
       if (this.props.uid !== undefined || this.props.gid !== undefined) {
-        const uid = this.props.uid ?? process.getuid!();
-        const gid = this.props.gid ?? process.getgid!();
-        yield* fs.chown(resolvedDest, uid, gid, { become });
+        yield* fs.chown(resolvedDest, this.props.uid ?? -1, this.props.gid ?? -1, { become });
       }
     });
   }

@@ -162,4 +162,29 @@ describe('ServiceResource', () => {
 
     await expect(Effect.runPromise(res.destroy().pipe(Effect.provide(MockInactive)))).rejects.toThrow(/connection inactive/);
   });
+
+  it('marks a service that was already enabled and running as preexisting', async () => {
+    const commands: string[] = [];
+    const stack = new Stack(new App(), 'test');
+    const res = new ServiceResource(stack, 'service:sshd', { name: 'sshd', state: 'started', enabled: true });
+    const RunningExec = Layer.succeed(SystemCommand, SystemCommand.of({
+      run: () => Effect.succeed(''),
+      execFile: (file, args) => {
+        commands.push([file, ...args].join(' '));
+        if (args.includes('UnitFileState')) return Effect.succeed('enabled');
+        if (args.includes('ActiveState')) return Effect.succeed('active');
+        return Effect.succeed('');
+      },
+    }));
+    await Effect.runPromise(res.apply().pipe(Effect.provide(MockPlatform), Effect.provide(RunningExec)));
+    expect(res.preexisting).toBe(true);
+    expect(commands.some((c) => c.includes('enable sshd') || c.includes('start sshd'))).toBe(false);
+  });
+
+  it('does not mark a service it started as preexisting', async () => {
+    const stack = new Stack(new App(), 'test');
+    const res = new ServiceResource(stack, 'service:nginx', { name: 'nginx', state: 'started' });
+    await Effect.runPromise(res.apply().pipe(Effect.provide(MockPlatform), Effect.provide(MockExec())));
+    expect(res.preexisting).toBe(false);
+  });
 });

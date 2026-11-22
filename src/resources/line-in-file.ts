@@ -67,11 +67,9 @@ export class LineInFileResource extends Resource {
             changed = true;
           }
         } else {
-          // If the last line is not empty and not the line we want, add it
-          if (lines.length > 0 && lines[lines.length - 1] !== '' && lines[lines.length - 1] !== line) {
-            lines.push(line);
-          } else if (lines.length === 1 && lines[0] === '') {
-            lines[0] = line;
+          // A trailing '' means the file ends in a newline: insert before it so the newline stays last.
+          if (lines[lines.length - 1] === '') {
+            lines.splice(lines.length - 1, 0, line);
           } else {
             lines.push(line);
           }

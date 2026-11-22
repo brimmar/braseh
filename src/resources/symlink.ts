@@ -6,6 +6,7 @@ import { hashConfig } from '../core/hash';
 export interface SymlinkResourceProps {
   source: string;
   path: string;
+  force?: boolean;
   dependsOn?: Component[];
   become?: boolean | string;
   retries?: number;
@@ -25,7 +26,7 @@ export class SymlinkResource extends Resource {
   apply() {
     return Effect.gen(this, function* (_) {
       const fs = yield* _(FileSystem);
-      yield* _(fs.symlink(this.props.source, this.props.path, { become: this.props.become }));
+      yield* _(fs.symlink(this.props.source, this.props.path, { become: this.props.become, force: this.props.force }));
     });
   }
 

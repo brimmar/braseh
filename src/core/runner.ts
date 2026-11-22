@@ -91,71 +91,65 @@ export const RunnerLive = Layer.effect(
 
           const tierConcurrency = "unbounded";
 
-          for (const tier of tiers) {
-            const groups = new Map<string | undefined, Resource[]>();
-            for (const res of tier) {
-              const key = res.concurrencyKey;
-              if (!groups.has(key)) groups.set(key, []);
-              groups.get(key)!.push(res);
-            }
+          const record = (res: Resource) =>
+            Effect.gen(function* () {
+              const { status, durationSeconds } = yield* runResource(
+                res,
+                currentState,
+                newState,
+                options,
+                resourceIndexMap.get(res.id),
+                rawResources.length,
+                display,
+              );
+              if (status === "created") created++;
+              else if (status === "updated") updated++;
+              else converged++;
+              executedResources.push({
+                id: res.id,
+                kind: res.kind,
+                status,
+                durationSeconds,
+              });
+            });
 
-            yield* Effect.all(
-              Array.from(groups.entries()).map(([key, resources]) =>
-                Effect.gen(function* () {
-                  if (key === undefined) {
-                    yield* Effect.all(
-                      resources.map((res) =>
-                        Effect.gen(function* () {
-                          const { status, durationSeconds } =
-                            yield* runResource(
-                              res,
-                              currentState,
-                              newState,
-                              options,
-                              resourceIndexMap.get(res.id),
-                              rawResources.length,
-                              display,
-                            );
-                          if (status === "created") created++;
-                          else if (status === "updated") updated++;
-                          else converged++;
-                          executedResources.push({
-                            id: res.id,
-                            kind: res.kind,
-                            status,
-                            durationSeconds,
-                          });
-                        }),
-                      ),
-                      { concurrency: tierConcurrency },
-                    );
-                  } else {
-                    for (const res of resources) {
-                      const { status, durationSeconds } = yield* runResource(
-                        res,
-                        currentState,
-                        newState,
-                        options,
-                        resourceIndexMap.get(res.id),
-                        rawResources.length,
-                        display,
-                      );
-                      if (status === "created") created++;
-                      else if (status === "updated") updated++;
-                      else converged++;
-                      executedResources.push({
-                        id: res.id,
-                        kind: res.kind,
-                        status,
-                        durationSeconds,
-                      });
-                    }
-                  }
-                }),
-              ),
-              { concurrency: tierConcurrency },
+          // Run everything, then fail with the first failure. Effect.all would interrupt the
+          // siblings, which leaves their child processes (apt-get, git) running unattended.
+          const settle = (effects: Effect.Effect<void, Error, any>[]) =>
+            Effect.all(effects.map(Effect.exit), {
+              concurrency: tierConcurrency,
+            }).pipe(
+              Effect.flatMap((exits) => {
+                const failed = exits.find(Exit.isFailure);
+                return failed ? Effect.failCause(failed.cause) : Effect.void;
+              }),
             );
-          }
+
+          yield* Effect.gen(function* () {
+            for (const tier of tiers) {
+              const groups = new Map<string | undefined, Resource[]>();
+              for (const res of tier) {
+                const key = res.concurrencyKey;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key)!.push(res);
+              }
+
+              yield* settle(
+                Array.from(groups.entries()).map(([key, resources]) =>
+                  key === undefined
+                    ? settle(resources.map(record))
+                    : Effect.forEach(resources, record, { discard: true }),
+                ),
+              );
+            }
+          }).pipe(
+            // Keep what did apply, so a later run can still destroy it. Untouched resources keep their old state.
+            Effect.onError(() =>
+              stateService
+                .save({ ...currentState, ...newState })
+                .pipe(Effect.ignore),
+            ),
+          );
 
           let deleted = 0;
           const destroyScope = new App();
@@ -170,6 +164,15 @@ export const RunnerLive = Layer.effect(
                 );
               }
               if (oldState) newState[id] = oldState;
+              continue;
+            }
+            if (oldState.metadata?.preexisting === true) {
+              // Dropped from state without a destroy: braseh found it on the system, it did not create it.
+              if (!options?.silent) {
+                console.warn(
+                  `leaving ${id} in place: it existed before braseh managed it`,
+                );
+              }
               continue;
             }
             toDestroy.push(
@@ -187,6 +190,9 @@ export const RunnerLive = Layer.effect(
             const previous = currentState[res.id];
             if (previous) persisted[res.id] = previous;
           }
+
+          // Record this run's applies before any destroy can fail.
+          yield* stateService.save(persisted);
 
           const sortedDestroy = sortDestroyResources(toDestroy);
           for (const [i, res] of sortedDestroy.entries()) {
@@ -321,7 +327,8 @@ function warnLeftoverScriptLineState(
 function metadataForState(
   props: Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const { dependsOn, ...rest } = props;
+  // content and vars are never read back (destroy needs the path only), so keep them out of state.json.
+  const { dependsOn, content, vars, ...rest } = props;
   return {
     ...rest,
     ...(Array.isArray(dependsOn)
@@ -397,10 +404,18 @@ function runResource(
       durationMs,
     });
 
+    // The first recorded answer wins: on later runs braseh's own install looks preexisting too.
+    const preexisting =
+      oldState?.metadata && "preexisting" in oldState.metadata
+        ? oldState.metadata.preexisting === true
+        : res.preexisting;
     newState[id] = {
       hash,
       kind: res.kind,
-      metadata: metadataForState({ ...(res.props as object) }),
+      metadata: {
+        ...metadataForState({ ...(res.props as object) }),
+        ...(preexisting === undefined ? {} : { preexisting }),
+      },
     };
     return { status: result, durationSeconds };
   });

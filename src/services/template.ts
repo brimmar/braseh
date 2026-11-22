@@ -12,7 +12,8 @@ export const TemplateServiceLive = Layer.succeed(
   TemplateService.of({
     render: (template, view) =>
       Effect.try({
-        try: () => Mustache.render(template, view),
+        // No HTML escaping: these are config files, where {{url}} must stay https://x/y, not https:&#x2F;...
+        try: () => Mustache.render(template, view, {}, { escape: (value) => String(value) }),
         catch: (error) => new Error(`Failed to render template: ${String(error)}`),
       }),
   })

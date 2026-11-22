@@ -44,6 +44,7 @@ export class UserResource extends Resource {
       const exists = yield* this.checkExists(name, exec);
 
       if (state === 'present') {
+        this.preexisting = exists;
         if (!exists) {
           const args: string[] = [];
           if (uid !== undefined) args.push('--uid', String(uid));

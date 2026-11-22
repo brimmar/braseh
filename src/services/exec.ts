@@ -12,10 +12,12 @@ export interface ExecOptions {
   cwd?: string;
   env?: Record<string, string>;
   become?: boolean | string;
-  stdin?: string;
+  stdin?: string | Uint8Array;
   intent?: "read" | "write";
   verbose?: boolean;
   probe?: boolean;
+  /** Return stdout as-is instead of trimmed, for reading file contents. */
+  raw?: boolean;
 }
 
 export type RunOptions = ExecOptions;
@@ -42,19 +44,26 @@ export interface SystemCommandConfig {
  * Prefix argv with sudo when `become` is set.
  * `true` / `'root'` → sudo -- file args.
  * other username → sudo -u user -- file args.
+ * `env` goes through `env K=V` because sudo's env_reset drops the caller's environment.
  */
 export function buildSudoArgs(
   file: string,
   args: string[],
   become?: boolean | string,
+  env?: Record<string, string>,
 ): { file: string; args: string[] } {
   if (!become) {
     return { file, args };
   }
+  const assignments = Object.entries(env ?? {}).map(([k, v]) => `${k}=${v}`);
+  const command =
+    assignments.length > 0
+      ? ["env", ...assignments, file, ...args]
+      : [file, ...args];
   if (become === true || become === "root") {
-    return { file: "sudo", args: ["--", file, ...args] };
+    return { file: "sudo", args: ["--", ...command] };
   }
-  return { file: "sudo", args: ["-u", become, "--", file, ...args] };
+  return { file: "sudo", args: ["-u", become, "--", ...command] };
 }
 
 class LineStreamer {
@@ -115,7 +124,7 @@ function spawnExecFile(
   tag?: string,
   resourceId?: string,
 ): Promise<string> {
-  const spawned = buildSudoArgs(file, args, options?.become);
+  const spawned = buildSudoArgs(file, args, options?.become, options?.env);
   const env = options?.env ? { ...process.env, ...options.env } : undefined;
   const cwd = options?.cwd
     ? options.cwd === "~"
@@ -214,7 +223,7 @@ function spawnExecFile(
         }
       }
       if (code === 0) {
-        resolve(stdout.trim());
+        resolve(options?.raw ? stdout : stdout.trim());
         return;
       }
       const detail = stderr.trim() || stdout.trim();

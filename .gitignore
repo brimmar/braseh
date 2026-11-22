@@ -34,3 +34,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 braseh
+
+# braseh state for configs applied from this repo (machine-specific)
+.braseh/state.json

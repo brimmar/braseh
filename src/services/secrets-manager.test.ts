@@ -381,4 +381,45 @@ describe("SecretManager Service", () => {
 
     await rm(testDir, { recursive: true, force: true });
   });
+
+  it("does not treat Object.prototype names as secrets, and rejects __proto__", async () => {
+    const testDir = join(tmpdir(), "braseh-sm-proto-" + Math.random().toString(36).slice(2));
+    const paths = { secretsFile: join(testDir, ".braseh", "vault"), masterKeyFile: join(testDir, ".braseh_key") };
+    const attempt = <A>(f: (sm: SecretManager) => Effect.Effect<A, Error>) =>
+      runManager(Effect.either(Effect.gen(function* () {
+        const sm = yield* SecretManager;
+        yield* sm.setPaths(paths);
+        return yield* f(sm);
+      })));
+
+    await attempt((sm) => sm.set("REAL", "value"));
+    const toStringResult = await attempt((sm) => sm.get("toString"));
+    expect(toStringResult._tag === "Left" ? toStringResult.left.message : "").toContain("Secret not found: toString");
+    const protoResult = await attempt((sm) => sm.set("__proto__", "x"));
+    expect(protoResult._tag).toBe("Left");
+    const listed = await attempt((sm) => sm.list());
+    expect(listed._tag === "Right" ? listed.right : []).toEqual(["REAL"]);
+
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  it("does not look for a vault in parent directories", async () => {
+    const root = join(tmpdir(), "braseh-sm-parent-" + Math.random().toString(36).slice(2));
+    const masterKeyFile = join(root, ".braseh_key");
+    const inParent = Effect.gen(function* () {
+      const sm = yield* SecretManager;
+      yield* sm.setPaths({ secretsFile: join(root, ".braseh", "vault"), masterKeyFile });
+      yield* sm.set("PARENT_ONLY", "planted");
+    });
+    await runManager(inParent);
+
+    const fromChild = await runManager(Effect.either(Effect.gen(function* () {
+      const sm = yield* SecretManager;
+      yield* sm.setPaths({ secretsFile: join(root, "child", ".braseh", "vault"), masterKeyFile });
+      return yield* sm.get("PARENT_ONLY");
+    })));
+    expect(fromChild._tag).toBe("Left");
+
+    await rm(root, { recursive: true, force: true });
+  });
 });

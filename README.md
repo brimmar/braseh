@@ -59,15 +59,19 @@ braseh prepare
 ```text
 braseh init [dir]
 braseh prepare [dir]
-braseh check [path]
-braseh apply [path] [--dry-run]
+braseh check [path] [--yes]
+braseh apply [path] [--dry-run] [--yes]
 braseh doctor
-braseh secrets set NAME value
+braseh secrets set NAME [value]
 braseh secrets list
 braseh secrets remove NAME
 ```
 
 `braseh --help` and `braseh -h` print the same list. No arguments opens the interactive menu.
+
+`apply` keeps state in `.braseh/state.json` next to the config file, so it does not matter which directory you run it from. When a resource leaves the config, the next apply destroys it. Packages, users, groups and services that were already on the machine before braseh first applied them are left in place and only dropped from state.
+
+`check` and `apply` with a `user/repo` or URL ask before loading it, because loading a config runs its code.
 
 ## API reference
 
@@ -86,7 +90,7 @@ Paths accept `~` for the home directory.
 pkg(name: string, props?: PackageProps): ResourceHandle
 ```
 
-Installs a package. Props: `manager?: 'brew' | 'apt' | 'npm' | 'pacman' | 'bun' | 'cargo' | 'pip'`, `version?: string`. Omit `manager` and the CLI infers one from the OS and distro.
+Installs a package. Props: `manager?: 'brew' | 'apt' | 'npm' | 'pacman' | 'bun' | 'cargo' | 'pip'`, `version?: string`, `state?: 'present' | 'absent'`. Omit `manager` and the CLI infers one from the OS and distro. `state: 'absent'` uninstalls the package if it is installed.
 
 ```ts
 import { pkg } from 'braseh';
@@ -103,6 +107,8 @@ file(path: string, props: FileProps): ResourceHandle
 
 Writes a file. Props: `content: string | SecretToken` (required), `vars?: Record<string, unknown>` (Mustache), `mode?: number`, `uid?: number`, `gid?: number`.
 
+`vars` values are inserted as-is, without HTML escaping, and may be `secret('NAME')`. `mode` is applied before the content is written.
+
 ```ts
 import { file } from 'braseh';
 
@@ -118,7 +124,9 @@ file('~/.gitconfig', {
 link(path: string, source: string, props?: LinkProps): ResourceHandle
 ```
 
-Creates a symlink at `path` pointing at `source`.
+Creates a symlink at `path` pointing at `source`. Props: `force?: boolean`.
+
+An existing symlink is replaced. A real file or directory at `path` makes apply fail, so your data is never deleted by surprise. Pass `force: true` to delete it and link in its place.
 
 ```ts
 import { link } from 'braseh';
@@ -332,10 +340,13 @@ onDistro(['ubuntu', 'debian'], () => {
 ## Secrets
 
 ```bash
-braseh secrets set NAME value
+braseh secrets set NAME            # prompts for the value
+printf '%s' "$TOKEN" | braseh secrets set NAME
 braseh secrets list
 braseh secrets remove NAME
 ```
+
+A value given as a third argument still works, but it lands in shell history and `ps`.
 
 Values are encrypted at rest. The master key lives in `~/.braseh_key`. Reference a secret from config with `secret('NAME')`.
 

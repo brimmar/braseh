@@ -15,6 +15,11 @@ RUN apt-get update -qq && \
         tar \
         iproute2
 
+# Containers can start with a skewed clock, and apt then rejects Release files as
+# "not valid yet". Tolerate that here, in the test image only, not in braseh.
+RUN printf 'Acquire::Check-Valid-Until "false";\nAcquire::Max-FutureTime "86400";\n' \
+        > /etc/apt/apt.conf.d/99-e2e-clock-skew
+
 # Non-root test user with passwordless sudo
 RUN useradd -m -s /bin/bash testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers

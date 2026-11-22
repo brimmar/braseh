@@ -6,7 +6,7 @@ import { Context, Effect, Layer } from "effect";
 import pc from "picocolors";
 import { type Component, flatten, Resource } from "../core/component";
 import { BrasehError } from "../core/errors";
-import { SecretToken } from "../core/secret";
+import { secretTokens } from "../core/secret";
 import { FileSystem } from "./fs";
 import { SecretManager } from "./secrets-manager";
 
@@ -44,6 +44,20 @@ export function extractCommandExecutable(command: string): string | null {
     return token;
   }
   return null;
+}
+
+function dependsOnTransitively(
+  from: Component,
+  target: Component,
+  seen = new Set<Component>(),
+): boolean {
+  for (const dep of from.dependencies) {
+    if (dep === target) return true;
+    if (seen.has(dep)) continue;
+    seen.add(dep);
+    if (dependsOnTransitively(dep, target, seen)) return true;
+  }
+  return false;
 }
 
 export function isExplicitPath(cmd: string): boolean {
@@ -124,22 +138,42 @@ export const ValidationServiceLive = Layer.effect(
         Effect.gen(function* () {
           const resources = flatten(component);
 
+          // 0. Same id, different settings, no order between them: both run at once and the
+          // last write wins. Identical duplicates (pkg('git') twice) are harmless, and so is a
+          // dependsOn chain like "create it, then state: 'absent'".
+          const seenById = new Map<string, Resource[]>();
+          for (const res of resources) {
+            const earlier = seenById.get(res.id) ?? [];
+            const clash = earlier.find(
+              (other) =>
+                other.hash() !== res.hash() &&
+                !dependsOnTransitively(res, other) &&
+                !dependsOnTransitively(other, res),
+            );
+            if (clash) {
+              return yield* Effect.fail(
+                new BrasehError(
+                  `${res.id} is declared more than once with different settings`,
+                  "Keep one declaration and merge the props into it, or order them with dependsOn. Unordered, both run at the same time and the last write wins.",
+                ),
+              );
+            }
+            seenById.set(res.id, [...earlier, res]);
+          }
+
           for (const res of resources) {
             const props = (res as any).props || {};
 
-            // 1. SecretToken references
-            for (const key of Object.keys(props)) {
-              const value = props[key];
-              if (value instanceof SecretToken) {
-                const secrets = yield* sm.list();
-                if (!secrets.includes(value.name)) {
-                  yield* Effect.fail(
-                    new BrasehError(
-                      `Secret not found: ${value.name} (referenced by ${res.id})`,
-                      `Configure the secret with 'braseh secrets set ${value.name} <value>' or verify .braseh/vault.`,
-                    ),
-                  );
-                }
+            // 1. SecretToken references, including ones inside file vars
+            for (const token of secretTokens(props)) {
+              const secrets = yield* sm.list();
+              if (!secrets.includes(token.name)) {
+                yield* Effect.fail(
+                  new BrasehError(
+                    `Secret not found: ${token.name} (referenced by ${res.id})`,
+                    `Configure the secret with 'braseh secrets set ${token.name}' or verify .braseh/vault.`,
+                  ),
+                );
               }
             }
 

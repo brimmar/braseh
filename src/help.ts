@@ -55,7 +55,7 @@ Examples:
   braseh prepare
   braseh prepare ~/dotfiles`;
 
-export const CHECK_HELP = `braseh check - Validate a configuration file without executing side effects
+export const CHECK_HELP = `braseh check - Validate a configuration file without applying it
 
 Usage:
   braseh check [path] [options]
@@ -64,12 +64,14 @@ Arguments:
   path                           Path to the configuration file (default: ./braseh.ts)
 
 Options:
+  -y, --yes                      Skip the trust prompt for a remote configuration
   --json                         Output validation report as structured JSON
   -h, --help                     Show this help message
 
 Description:
   Loads the configuration, builds the dependency graph, verifies secret
   references exist in .braseh/vault, and checks executable prerequisites.
+  Loading runs the config's code, so a remote repository asks for trust first.
 
 Examples:
   braseh check
@@ -94,7 +96,10 @@ Options:
 
 Description:
   Evaluates the configuration graph and reconciles system state in dependency order.
-  Tracks state in ~/.braseh/state.json to detect additions, changes, and deletions.
+  Tracks state in .braseh/state.json next to the config file (remote configs use
+  ~/.braseh/remote/<id>/state.json) to detect additions, changes, and deletions.
+  Packages, users, groups and services that existed before braseh are left in
+  place when they leave the config.
   Each applied resource reports its execution duration on the right.
 
 Examples:
@@ -143,7 +148,7 @@ Examples:
   braseh secrets list
   braseh secrets list --json
   braseh secrets get ssh_private_key
-  braseh secrets set API_KEY "secret-value"
+  braseh secrets set API_KEY
   braseh secrets remove API_KEY
 
 Run 'braseh secrets <action> --help' for details on a specific action.`;
@@ -165,18 +170,19 @@ Examples:
 export const SECRETS_SET_HELP = `braseh secrets set - Store an encrypted secret in the vault
 
 Usage:
-  braseh secrets set <name> <value>
+  braseh secrets set <name> [value]
 
 Arguments:
   name                           Name of the secret
-  value                          Secret value to encrypt and store
+  value                          Secret value. Omit it to be prompted, or pipe it on
+                                 stdin. A value here is visible in shell history and ps.
 
 Options:
   -h, --help                     Show this help message
 
 Examples:
-  braseh secrets set GH_TOKEN "ghp_xxxx"
-  braseh secrets set API_KEY "sk-xxxx"`;
+  braseh secrets set GH_TOKEN
+  gh auth token | braseh secrets set GH_TOKEN`;
 
 export const SECRETS_LIST_HELP = `braseh secrets list - List all secret names stored in the vault
 

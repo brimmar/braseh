@@ -602,4 +602,90 @@ describe('Runner', () => {
     expect(logs.some((l) => l.includes('=>') && l.includes('#1 [pkg:curl]'))).toBe(true);
     expect(logs.some((l) => l.includes('#1 [pkg:curl]') && l.includes('+ Create: pkg:curl'))).toBe(true);
   });
+
+  it('drops a preexisting resource from state without destroying it', async () => {
+    const app = new App();
+    new Stack(app, 'test');
+    let saved: AppState | undefined;
+    const TestRunnerLayer = RunnerLive.pipe(Layer.provide(MockState(
+      { 'pkg-like': { hash: 'hash', kind: 'test', metadata: { preexisting: true } } },
+      (state) => { saved = state; },
+    )));
+
+    await Effect.runPromise(Effect.provide(Effect.flatMap(Runner, (r) => r.run(app, { silent: true })), TestRunnerLayer));
+
+    expect(TestResource.destroyedIds).toEqual([]);
+    expect(saved?.['pkg-like']).toBeUndefined();
+  });
+
+  it('records preexisting on first apply and keeps the first answer', async () => {
+    const app = new App();
+    const stack = new Stack(app, 'test');
+    const fresh = new TestResource(stack, 'fresh');
+    fresh.preexisting = true;
+    const owned = new TestResource(stack, 'owned');
+    // braseh installed it last time; now it looks preexisting, which must not stick.
+    owned.preexisting = true;
+    let saved: AppState | undefined;
+    const TestRunnerLayer = RunnerLive.pipe(Layer.provide(MockState(
+      { owned: { hash: 'hash', kind: 'test', metadata: { preexisting: false } } },
+      (state) => { saved = state; },
+    )));
+
+    await Effect.runPromise(Effect.provide(Effect.flatMap(Runner, (r) => r.run(app, { silent: true })), TestRunnerLayer));
+
+    expect(saved?.fresh?.metadata.preexisting).toBe(true);
+    expect(saved?.owned?.metadata.preexisting).toBe(false);
+  });
+
+  it('lets siblings of a failed resource finish and saves what applied', async () => {
+    class FailingResource extends Resource {
+      override readonly kind = 'test' as const;
+      override apply() {
+        return Effect.fail(new Error('apply failed'));
+      }
+      override destroy() {
+        return Effect.void;
+      }
+      override hash() {
+        return 'hash';
+      }
+    }
+    class SlowResource extends TestResource {
+      override apply() {
+        return Effect.sleep('30 millis').pipe(Effect.tap(() => Effect.sync(() => { this.applied = true; })));
+      }
+    }
+    const app = new App();
+    const stack = new Stack(app, 'test');
+    new FailingResource(stack, 'broken');
+    const slow = new SlowResource(stack, 'slow');
+    const saves: AppState[] = [];
+    const TestRunnerLayer = RunnerLive.pipe(Layer.provide(MockState(
+      { untouched: { hash: 'hash', kind: 'test', metadata: {} } },
+      (state) => { saves.push({ ...state }); },
+    )));
+
+    await expect(
+      Effect.runPromise(Effect.provide(Effect.flatMap(Runner, (r) => r.run(app, { silent: true })), TestRunnerLayer)),
+    ).rejects.toThrow(/apply failed/);
+
+    expect(slow.applied).toBe(true);
+    const last = saves[saves.length - 1];
+    expect(last?.slow).toBeDefined();
+    expect(last?.untouched).toBeDefined();
+    expect(TestResource.destroyedIds).toEqual([]);
+  });
+
+  it('keeps file content and template vars out of state', async () => {
+    const app = new App();
+    const stack = new Stack(app, 'test');
+    new TestResource(stack, 'f', 'hash', { path: '/tmp/f', content: 'token=abc', vars: { k: 'v' } });
+    let saved: AppState | undefined;
+    const TestRunnerLayer = RunnerLive.pipe(Layer.provide(MockState({}, (state) => { saved = state; })));
+
+    await Effect.runPromise(Effect.provide(Effect.flatMap(Runner, (r) => r.run(app, { silent: true })), TestRunnerLayer));
+
+    expect(saved?.f?.metadata).toEqual({ path: '/tmp/f' });
+  });
 });

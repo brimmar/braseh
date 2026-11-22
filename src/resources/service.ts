@@ -34,6 +34,8 @@ export class ServiceResource extends Resource {
       const exec = yield* SystemCommand;
       const platform = yield* PlatformService;
       const info = yield* platform.get();
+      // Only a service braseh enabled or started gets disabled and stopped on destroy.
+      let changed = false;
 
       if (info.os !== 'linux') {
         throw new Error(`Service resource is currently only supported on Linux (systemd). Current OS: ${info.os}`);
@@ -48,6 +50,7 @@ export class ServiceResource extends Resource {
         const isEnabled = unitFileState === 'enabled';
         if (enabled && !isEnabled) {
           yield* exec.execFile('systemctl', [...userFlag, 'enable', name], { become });
+          changed = true;
         } else if (!enabled && isEnabled) {
           yield* exec.execFile('systemctl', [...userFlag, 'disable', name], { become });
         }
@@ -63,7 +66,10 @@ export class ServiceResource extends Resource {
 
         switch (state) {
           case 'started':
-            if (!isActive) yield* exec.execFile('systemctl', [...userFlag, 'start', name], { become });
+            if (!isActive) {
+              yield* exec.execFile('systemctl', [...userFlag, 'start', name], { become });
+              changed = true;
+            }
             break;
           case 'stopped':
             if (isActive) yield* exec.execFile('systemctl', [...userFlag, 'stop', name], { become });
@@ -76,6 +82,7 @@ export class ServiceResource extends Resource {
             break;
         }
       }
+      this.preexisting = !changed;
     });
   }
 

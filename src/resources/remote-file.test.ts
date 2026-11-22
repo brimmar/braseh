@@ -9,6 +9,8 @@ import { HttpService } from '../services/http';
 import { FileSystem, FileSystemLive } from '../services/fs';
 import { SystemCommand, SystemCommandLive } from '../services/exec';
 import { App, Stack } from '../core/app';
+import { DryRun } from '../services/dry-run';
+import { createHash } from 'node:crypto';
 
 describe('RemoteFileResource', () => {
   let app: App;
@@ -230,5 +232,46 @@ describe('RemoteFileResource', () => {
 
     expect(existsSync(path)).toBe(false);
     await rm(testDir, { recursive: true, force: true });
+  });
+
+  const recordingFS = (writes: string[]) => Layer.succeed(FileSystem, FileSystem.of({
+    writeFile: () => Effect.void,
+    readFile: () => Effect.succeed(''),
+    exists: () => Effect.succeed(false),
+    mkdir: () => Effect.void,
+    symlink: () => Effect.void,
+    rm: () => Effect.void,
+    rmdir: () => Effect.void,
+    unlink: () => Effect.void,
+    chmod: () => Effect.void,
+    chown: () => Effect.void,
+    writeFileBytes: (path) => Effect.sync(() => { writes.push(path); }),
+  }));
+  const NoHttp = Layer.succeed(HttpService, HttpService.of({
+    downloadString: () => Effect.die('no download expected'),
+    downloadBytes: () => Effect.die('no download expected'),
+    downloadWithMetadata: () => Effect.die('no download expected'),
+  }));
+
+  it('does not download during a dry run', async () => {
+    const writes: string[] = [];
+    const res = new RemoteFileResource(stack, 'remote:/tmp/dry', { url: 'https://example.com/x', path: '/tmp/dry', sha256: 'ab' });
+    await Effect.runPromise(res.apply().pipe(
+      Effect.provide(NoHttp), Effect.provide(recordingFS(writes)), Effect.provide(Layer.succeed(DryRun, true)),
+    ));
+    expect(writes).toEqual(['/tmp/dry']);
+  });
+
+  it('skips the download when the file already matches sha256, in any letter case', async () => {
+    const dir = join(tmpdir(), 'braseh-remote-pinned-' + Math.random().toString(36).slice(2));
+    const path = join(dir, 'tool');
+    await mkdir(dir, { recursive: true });
+    await writeFile(path, 'pinned');
+    const sha = createHash('sha256').update('pinned').digest('hex').toUpperCase();
+    const writes: string[] = [];
+    const res = new RemoteFileResource(stack, `remote:${path}`, { url: 'https://example.com/tool', path, sha256: sha });
+    await Effect.runPromise(res.apply().pipe(Effect.provide(NoHttp), Effect.provide(recordingFS(writes))));
+    expect(writes).toEqual([]);
+    await rm(dir, { recursive: true, force: true });
   });
 });

@@ -11,14 +11,23 @@ KEEP=false
 NO_BUILD=false
 SUITE=""
 
-for arg in "$@"; do
-  case "$arg" in
+# while + shift, not for: shift inside a for loop does not move the loop, so
+# "--no-build --suite service" used to set SUITE to the literal "--suite".
+while [ $# -gt 0 ]; do
+  case "$1" in
     --keep)     KEEP=true ;;
     --no-build) NO_BUILD=true ;;
-    --suite)    shift; SUITE="$1" ;;
-    --suite=*)  SUITE="${arg#--suite=}" ;;
+    --suite)    shift; SUITE="${1:-}" ;;
+    --suite=*)  SUITE="${1#--suite=}" ;;
   esac
+  shift
 done
+
+# An unknown name would run nothing and report the suite as passed.
+case "$SUITE" in
+  ""|basic|advanced|system|secrets|service) ;;
+  *) echo "unknown suite: $SUITE" >&2; exit 2 ;;
+esac
 
 SUITES=("basic" "advanced" "system" "secrets")
 if [ -n "$SUITE" ]; then
@@ -95,7 +104,8 @@ run_suite() {
         braseh secrets set DB_PASSWORD 'supersecret123'
         braseh secrets set API_KEY 'test-api-key-abc'
 
-        # Test check command
+        # Test check command (a local config needs editor types first)
+        braseh prepare /home/testuser
         braseh check /home/testuser/secrets.ts
 
         # Test init command

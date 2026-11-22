@@ -159,4 +159,49 @@ describe("ValidationService", () => {
 
     await Effect.runPromise(Effect.provide(program, MainLive));
   });
+
+  const validate = (app: App, secrets: string[] = []) =>
+    Effect.runPromise(Effect.either(Effect.gen(function* () {
+      const validator = yield* ValidationService;
+      yield* validator.validate(app);
+    }).pipe(Effect.provide(ValidationServiceLive.pipe(Layer.provideMerge(getMockSM(secrets)), Layer.provideMerge(MockFS))))));
+
+  it("fails when one id is declared twice with different settings", async () => {
+    const app = new App();
+    const stack = new Stack(app, "test");
+    new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "one" });
+    new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "two" });
+    const result = await validate(app);
+    expect(result._tag).toBe("Left");
+    expect(String(result._tag === "Left" ? result.left.message : "")).toContain("declared more than once");
+  });
+
+  it("allows a duplicate id ordered by dependsOn, like create then state: absent", async () => {
+    const app = new App();
+    const stack = new Stack(app, "test");
+    const first = new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "one" });
+    new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "two", dependsOn: [first] });
+    expect((await validate(app))._tag).toBe("Right");
+  });
+
+  it("allows identical duplicate declarations", async () => {
+    const app = new App();
+    const stack = new Stack(app, "test");
+    new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "same" });
+    new FileResource(stack, "file:/tmp/x", { path: "/tmp/x", content: "same" });
+    expect((await validate(app))._tag).toBe("Right");
+  });
+
+  it("checks secrets referenced inside nested file vars", async () => {
+    const app = new App();
+    const stack = new Stack(app, "test");
+    new FileResource(stack, "file:/tmp/npmrc", {
+      path: "/tmp/npmrc",
+      content: "{{auth.token}}",
+      vars: { auth: { token: secret("NPM_TOKEN") } },
+    });
+    const missing = await validate(app);
+    expect(String(missing._tag === "Left" ? missing.left.message : "")).toContain("Secret not found: NPM_TOKEN");
+    expect((await validate(app, ["NPM_TOKEN"]))._tag).toBe("Right");
+  });
 });

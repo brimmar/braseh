@@ -16,6 +16,8 @@ export type PackageManager = 'brew' | 'apt' | 'npm' | 'pacman' | 'bun' | 'cargo'
 export interface PackageProps extends ResourceBaseProps {
   manager?: PackageManager;
   version?: string;
+  /** `'absent'` uninstalls the package if it is installed. Default `'present'`. */
+  state?: 'present' | 'absent';
 }
 
 export interface FileProps extends ResourceBaseProps {
@@ -29,6 +31,8 @@ export interface FileProps extends ResourceBaseProps {
 export interface LinkProps extends ResourceBaseProps {
   source?: string;
   path?: string;
+  /** Delete a real file or directory at `path` so the link can take its place. Without it, apply fails instead. */
+  force?: boolean;
 }
 
 export interface DirectoryProps extends ResourceBaseProps {

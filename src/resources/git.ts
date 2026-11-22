@@ -45,14 +45,29 @@ export class GitResource extends Resource {
       const exec = yield* SystemCommand;
       const fs = yield* FileSystem;
 
-      const exists = yield* fs.exists(targetDest);
-      const isGit = exists && (yield* fs.exists(`${targetDest}/.git`));
-
       const become = this.props.become;
       const inRepo = { cwd: targetDest, become };
 
+      const exists = yield* fs.exists(targetDest);
+      const isGit = exists && (yield* fs.exists(`${targetDest}/.git`));
+      // git clone handles an empty directory itself. Anything unreadable counts as non-empty.
+      const hasFiles =
+        exists &&
+        !isGit &&
+        (yield* exec.execFile('ls', ['-A', targetDest], { become, intent: 'read' }).pipe(
+          Effect.map((out) => out !== ''),
+          Effect.orElseSucceed(() => true),
+        ));
+
       if (!isGit) {
-        if (exists) {
+        if (hasFiles) {
+          if (!this.props.force) {
+            return yield* Effect.fail(
+              new Error(
+                `Git destination ${dest} exists, is not a git repository, and is not empty. Checking out ${url} there would overwrite files. Pass force: true to do it anyway.`,
+              ),
+            );
+          }
           yield* exec.execFile("git", ["init"], inRepo);
           yield* exec.execFile("git", ["remote", "add", "origin", url], inRepo);
           const fetchArgs = ["fetch"];

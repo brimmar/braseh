@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import * as ts from '@typescript/typescript6';
 import { embeddedTypesStamp, nodeTypeAssets } from '../embedded/node-types-assets';
 
@@ -35,7 +35,9 @@ export function ensureEmbeddedTypes(
 ): string {
   if (existsSync(join(fromSource, 'node', 'index.d.ts'))) return fromSource;
 
-  const dest = join(tmpdir(), `braseh-embedded-types-${embeddedTypesStamp}`);
+  // Per-user cache: a shared /tmp path could be pre-filled by another user with types that change check results.
+  const cacheRoot = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
+  const dest = join(cacheRoot, 'braseh', `embedded-types-${embeddedTypesStamp}`);
   if (existsSync(join(dest, '.complete'))) return dest;
 
   const staging = `${dest}.${process.pid}.tmp`;

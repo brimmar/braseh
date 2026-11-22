@@ -3,19 +3,6 @@ import type { PackageProvider } from '../provider';
 import { SystemCommand } from '../../../services/exec';
 import * as p from '@clack/prompts';
 
-function checkWithWhich(name: string) {
-  return Effect.gen(function* () {
-    const exec = yield* SystemCommand;
-    return yield* Effect.match(
-      exec.execFile('which', [name], { intent: 'read' }),
-      {
-        onFailure: () => false,
-        onSuccess: () => true,
-      }
-    );
-  });
-}
-
 export class BrewProvider implements PackageProvider {
   install(name: string, version?: string, options?: { become?: boolean | string }) {
     return Effect.gen(function* () {
@@ -79,7 +66,8 @@ export class AptProvider implements PackageProvider {
           onSuccess: (out) => out,
         }
       );
-      if (!output) return false;
+      // dpkg -s also succeeds for removed packages that left config files ("deinstall ok config-files").
+      if (!/^Status: \S+ ok installed$/m.test(output)) return false;
       if (version) return output.includes(`Version: ${version}`);
       return true;
     });
@@ -135,8 +123,16 @@ export class BunProvider implements PackageProvider {
       yield* exec.execFile('bun', ['remove', '-g', name], { become: options?.become });
     });
   }
-  isInstalled(name: string, _version?: string) {
-    return checkWithWhich(name);
+  isInstalled(name: string, version?: string) {
+    return Effect.gen(function* () {
+      const exec = yield* SystemCommand;
+      // Lines look like "├── typescript@5.4.5". The binary name can differ from the package name.
+      const output = yield* exec
+        .execFile('bun', ['pm', 'ls', '-g'], { intent: 'read' })
+        .pipe(Effect.orElseSucceed(() => ''));
+      const wanted = RegExp.escape(`${name}@${version ?? ''}`);
+      return new RegExp(`\\s${wanted}${version ? '$' : ''}`, 'm').test(output);
+    });
   }
 }
 

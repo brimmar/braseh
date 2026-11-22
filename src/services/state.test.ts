@@ -3,9 +3,9 @@ import { Effect, Layer } from 'effect';
 import { StateService, StateServiceLive } from './state';
 import { FileSystemLive } from './fs';
 import { SystemCommandLive } from './exec';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { rm } from 'node:fs/promises';
+import { readdir, rm, stat, writeFile } from 'node:fs/promises';
 
 describe('StateService', () => {
   const testDir = join(tmpdir(), 'braseh-state-test-' + Math.random().toString(36).slice(2));
@@ -34,5 +34,26 @@ describe('StateService', () => {
 
     await Effect.runPromise(runnable);
     await rm(testDir, { recursive: true, force: true });
+  });
+
+  it('saves atomically with mode 0600 and reports corrupt JSON clearly', async () => {
+    const dir = join(tmpdir(), 'braseh-state-atomic-' + Math.random().toString(36).slice(2));
+    const path = join(dir, '.braseh', 'state.json');
+    const run = <A>(f: (state: StateService) => Effect.Effect<A, Error>) =>
+      Effect.runPromise(Effect.either(Effect.gen(function* () {
+        const state = yield* StateService;
+        yield* state.setPath(path);
+        return yield* f(state);
+      }).pipe(Effect.provide(StateServiceLive), Effect.provide(FileSystemLive), Effect.provide(SystemCommandLive))));
+
+    await run((state) => state.save({ a: { hash: 'h', kind: 'file', metadata: {} } }));
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
+    expect((await readdir(dirname(path))).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+
+    await writeFile(path, '{"a": {"hash": "h", "kin');
+    const corrupt = await run((state) => state.load());
+    expect(corrupt._tag === 'Left' ? corrupt.left.message : '').toContain('not valid JSON');
+
+    await rm(dir, { recursive: true, force: true });
   });
 });

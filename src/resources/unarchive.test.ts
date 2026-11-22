@@ -157,7 +157,7 @@ describe('UnarchiveResource', () => {
     );
     expect(calls[0]).toEqual({
       file: 'tar',
-      args: ['-xzf', '/tmp/a.tar.gz', '-C', '/tmp/out', '--strip-components=1'],
+      args: ['-xzf', '/tmp/a.tar.gz', '-C', '/tmp/out', '--no-same-owner', '--no-same-permissions', '--strip-components=1'],
     });
   });
 

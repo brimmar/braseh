@@ -10,10 +10,11 @@ import { FileSystem, FileSystemLive } from '../services/fs';
 import { SystemCommand, SystemCommandLive } from '../services/exec';
 import { SecretManager } from '../services/secrets-manager';
 import { TemplateService, TemplateServiceLive } from '../services/template';
+import { secret } from '../core/secret';
 
 describe('FileResource', () => {
   const MockFS = (state: any) => Layer.succeed(FileSystem, FileSystem.of({
-    writeFile: (path, content) => Effect.sync(() => { state.writtenPath = path; state.writtenContent = content; state.exists = true; }),
+    writeFile: (path, content, opts) => Effect.sync(() => { state.writtenPath = path; state.writtenContent = content; state.writeOptions = opts; state.exists = true; }),
     readFile: () => Effect.succeed(''),
     exists: () => Effect.sync(() => state.exists),
     mkdir: () => Effect.void,
@@ -177,5 +178,26 @@ describe('FileResource', () => {
     );
     
     expect(state.writtenContent).toBe('Hello Braseh!');
+  });
+
+  it('resolves secrets inside vars before rendering', async () => {
+    const state: any = { exists: false };
+    const stack = new Stack(new App(), 'test');
+    const fileRes = new FileResource(stack, 'file:/tmp/npmrc', {
+      path: '/tmp/npmrc',
+      content: '//registry.npmjs.org/:_authToken={{token}}',
+      vars: { token: secret('NPM_TOKEN') },
+    });
+    await Effect.runPromise(Effect.provide(fileRes.apply(), Layer.mergeAll(MockFS(state), MockSM, TemplateServiceLive)));
+    expect(state.writtenContent).toBe('//registry.npmjs.org/:_authToken=secret-val');
+  });
+
+  it('passes mode into the write and leaves the uid alone when only gid is set', async () => {
+    const state: any = { exists: false };
+    const stack = new Stack(new App(), 'test');
+    const fileRes = new FileResource(stack, 'file:/etc/foo', { path: '/etc/foo', content: 'x', mode: 0o600, gid: 27, become: true });
+    await Effect.runPromise(Effect.provide(fileRes.apply(), Layer.mergeAll(MockFS(state), MockSM, MockTemplate)));
+    expect(state.writeOptions).toEqual({ become: true, mode: 0o600 });
+    expect(state.chown).toEqual({ path: '/etc/foo', uid: -1, gid: 27 });
   });
 });

@@ -49,17 +49,37 @@ main() {
   local version="${1:-latest}"
   local binary="braseh-${target}"
 
+  local base
   if [ "$version" = "latest" ]; then
-    url="https://github.com/${REPO}/releases/latest/download/${binary}"
+    base="https://github.com/${REPO}/releases/latest/download"
   else
-    url="https://github.com/${REPO}/releases/download/${version}/${binary}"
+    base="https://github.com/${REPO}/releases/download/${version}"
   fi
 
   mkdir -p "$INSTALL_DIR"
 
+  # Download next to the destination, verify, then mv: a failed or tampered
+  # download never replaces a working binary.
+  # Global, not local: the EXIT trap runs after main returns, under set -u.
+  tmp=$(mktemp "${INSTALL_DIR}/.braseh.XXXXXX")
+  trap 'rm -f "$tmp" "$tmp.sums"' EXIT
+
   echo "downloading braseh (${target})..."
-  download "$url" "${INSTALL_DIR}/braseh"
-  chmod +x "${INSTALL_DIR}/braseh"
+  download "${base}/${binary}" "$tmp"
+  download "${base}/checksums.txt" "$tmp.sums"
+
+  local expected actual
+  expected=$(awk -v f="$binary" '$2 == f || $2 == "*" f { print $1 }' "$tmp.sums")
+  [ -n "$expected" ] || die "no checksum for ${binary} in checksums.txt"
+  if command -v sha256sum &>/dev/null; then
+    actual=$(sha256sum "$tmp" | awk '{ print $1 }')
+  else
+    actual=$(shasum -a 256 "$tmp" | awk '{ print $1 }')
+  fi
+  [ "$expected" = "$actual" ] || die "checksum mismatch for ${binary}: expected ${expected}, got ${actual}"
+
+  chmod +x "$tmp"
+  mv -f "$tmp" "${INSTALL_DIR}/braseh"
 
   echo "braseh installed to ${INSTALL_DIR}/braseh"
 

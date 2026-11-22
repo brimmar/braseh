@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -18,13 +19,14 @@ import { FileSystem, FileSystemLive } from "../services/fs";
 import { HttpServiceLive } from "../services/http";
 import { PlatformServiceLive } from "../services/platform";
 import {
+  confirmRemoteConfig,
   RemoteRepoService,
   RemoteRepoServiceLive,
 } from "../services/remote-repo";
 import { SecretStoreLive } from "../services/secrets";
 import { SecretManager, SecretManagerLive } from "../services/secrets-manager";
 import {
-  type AppState,
+  parseState,
   StateService,
   StateServiceLive,
 } from "../services/state";
@@ -60,6 +62,16 @@ export interface ApplyResult {
     status: "created" | "updated" | "converged" | "deleted";
     durationSeconds?: number;
   }>;
+}
+
+/**
+ * State lives with the config it describes, never in the shell's cwd. Otherwise applying a second
+ * config from the first one's directory would destroy everything the first one created.
+ */
+export function statePathFor(config: { dir: string } | { url: string }): string {
+  if ("dir" in config) return join(config.dir, ".braseh", "state.json");
+  const id = createHash("sha256").update(config.url).digest("hex").slice(0, 16);
+  return join(homedir(), ".braseh", "remote", id, "state.json");
 }
 
 /** Live reads; mutating methods log and do not touch disk. */
@@ -208,7 +220,7 @@ export async function brasehApply(
                 const exists = yield* fs.exists(statePath);
                 if (!exists) return {};
                 const content = yield* fs.readFile(statePath);
-                return JSON.parse(content) as AppState;
+                return yield* parseState(content, statePath);
               }),
             save: () => Effect.void,
           });
@@ -222,29 +234,12 @@ export async function brasehApply(
     const runner = yield* _(Runner);
     const secretManager = yield* _(SecretManager);
     const validator = yield* _(ValidationService);
+    const stateService = yield* _(StateService);
 
     if (remoteRepo.isRemote(configPath)) {
       const url = yield* _(remoteRepo.resolve(configPath));
-
-      const shouldConfirm = !options.yes && process.env.BRASEH_YES !== "1";
-      if (shouldConfirm) {
-        const confirmed = yield* _(
-          Effect.promise(() =>
-            p.confirm({
-              message: `Applying remote configuration from ${pc.yellow(url)}. Do you trust this repository?`,
-              initialValue: false,
-            }),
-          ),
-        );
-
-        if (!confirmed || p.isCancel(confirmed)) {
-          return yield* _(
-            Effect.fail(
-              new Error("Remote configuration apply cancelled by user."),
-            ),
-          );
-        }
-      }
+      yield* _(confirmRemoteConfig(url, options.yes));
+      yield* _(stateService.setPath(statePathFor({ url })));
 
       return yield* _(
         tempDir.use((dir) =>
@@ -327,6 +322,7 @@ export async function brasehApply(
     } else {
       const resolved = resolve(configPath);
       const configDir = dirname(resolved);
+      yield* _(stateService.setPath(statePathFor({ dir: configDir })));
       yield* _(
         secretManager.setPaths({
           secretsFile: join(configDir, ".braseh", "vault"),

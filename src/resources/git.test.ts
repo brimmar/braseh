@@ -42,6 +42,21 @@ describe("GitResource", () => {
       }),
     );
 
+  /** Like MockExec, but `ls -A` (the emptiness probe) prints `listing`. */
+  const execWithListing = (commands: string[], listing: string) =>
+    Layer.succeed(
+      SystemCommand,
+      SystemCommand.of({
+        run: () => Effect.succeed(""),
+        execFile: (file, args) => {
+          const cmd = [file, ...args].join(" ");
+          commands.push(cmd);
+          if (file === "ls") return Effect.succeed(listing);
+          return Effect.succeed("");
+        },
+      }),
+    );
+
   it("should clone a repository if it does not exist", async () => {
     const commands: string[] = [];
     const app = new App();
@@ -205,6 +220,7 @@ describe("GitResource", () => {
       dest: "/tmp/existing-folder",
       branch: "main",
       sparse: ["dir1"],
+      force: true,
     });
 
     const fsExistingDir = Layer.succeed(
@@ -220,7 +236,7 @@ describe("GitResource", () => {
         .apply()
         .pipe(
           Effect.provide(fsExistingDir),
-          Effect.provide(MockExec(commands)),
+          Effect.provide(execWithListing(commands, "local-file")),
         ),
     );
 
@@ -233,6 +249,55 @@ describe("GitResource", () => {
     expect(commands).toContain("git sparse-checkout set dir1");
     expect(commands).toContain("git checkout -f origin/main");
     expect(commands).toContain("git checkout -B main");
+  });
+
+  it("refuses to check out over a non-empty, non-git destination without force", async () => {
+    const commands: string[] = [];
+    const app = new App();
+    const stack = new Stack(app, "test");
+    const gitRes = new GitResource(stack, "git-test", {
+      url: "https://github.com/test/repo.git",
+      dest: "/tmp/existing-folder",
+    });
+
+    const result = await Effect.runPromise(
+      Effect.either(
+        gitRes
+          .apply()
+          .pipe(
+            Effect.provide(MockFS(true)),
+            Effect.provide(execWithListing(commands, "init.lua")),
+          ),
+      ),
+    );
+
+    expect(result._tag).toBe("Left");
+    expect(String(result._tag === "Left" ? result.left : "")).toContain("force: true");
+    expect(commands.some((c) => c.startsWith("git"))).toBe(false);
+  });
+
+  it("clones into an existing empty directory", async () => {
+    const commands: string[] = [];
+    const app = new App();
+    const stack = new Stack(app, "test");
+    const gitRes = new GitResource(stack, "git-test", {
+      url: "https://github.com/test/repo.git",
+      dest: "/tmp/empty-folder",
+    });
+
+    await Effect.runPromise(
+      gitRes
+        .apply()
+        .pipe(
+          Effect.provide(MockFS(true)),
+          Effect.provide(execWithListing(commands, "")),
+        ),
+    );
+
+    expect(commands).toContain(
+      "git clone https://github.com/test/repo.git /tmp/empty-folder",
+    );
+    expect(commands).not.toContain("git init");
   });
 
   it("should not delete dest on destroy", async () => {

@@ -18,7 +18,8 @@ describe('AptRepositoryResource', () => {
     writeFile: (path: string, content: string) => Effect.sync(() => { files[path] = content; }),
     mkdir: (path: string) => Effect.succeed(undefined),
     rm: (path: string) => Effect.sync(() => { delete files[path]; }),
-    writeFileBytes: () => Effect.void,
+    writeFileBytes: (path: string, content: Uint8Array) =>
+      Effect.sync(() => { files[path] = new TextDecoder().decode(content); }),
   } as any));
 
   const MockHttp = (keyContent: string) => Layer.succeed(HttpService, HttpService.of({
@@ -31,8 +32,8 @@ describe('AptRepositoryResource', () => {
       commands.push(cmd);
       return Effect.succeed('');
     },
-    execFile: (file, args) => {
-      commands.push([file, ...args].join(' '));
+    execFile: (file, args, opts) => {
+      commands.push([file, ...args].join(' ') + (opts?.stdin !== undefined ? ' <stdin' : ''));
       return Effect.succeed('');
     },
   }));
@@ -62,7 +63,8 @@ describe('AptRepositoryResource', () => {
     );
 
     expect(files['/etc/apt/sources.list.d/docker.list']).toContain('[signed-by=/etc/apt/keyrings/docker.gpg]');
-    expect(commands).toContain('gpg --dearmor --output /etc/apt/keyrings/docker.gpg /tmp/braseh-docker.key');
+    expect(commands).toContain('gpg --batch --yes --dearmor --output /etc/apt/keyrings/docker.gpg <stdin');
+    expect(commands.some((c) => c.includes('/tmp/'))).toBe(false);
     expect(commands.some((c) => c.startsWith('apt-get update'))).toBe(true);
   });
 
@@ -169,15 +171,15 @@ describe('AptRepositoryResource', () => {
       ),
     );
 
-    expect(commands).toContain('cp /tmp/braseh-github-cli.key /etc/apt/keyrings/github-cli.gpg');
+    expect(files['/etc/apt/keyrings/github-cli.gpg']).toBe(binaryKey);
     expect(commands.some((c) => c.includes('gpg --dearmor'))).toBe(false);
   });
 
-  it('should remove broken .list files pointing to missing or invalid keyrings before apt update', async () => {
+  it('leaves other sources.list.d files alone, even with an unreadable keyring', async () => {
     const commands: string[] = [];
     const files: Record<string, string> = {
       '/etc/apt/sources.list.d': '',
-      '/etc/apt/sources.list.d/broken.list': 'deb [signed-by=/etc/apt/keyrings/broken.gpg] https://example.com stable main',
+      '/etc/apt/sources.list.d/someone-else.list': 'deb [signed-by=/usr/share/keyrings/other.gpg] https://example.com stable main',
     };
     const app = new App();
     const stack = new Stack(app, 'test');
@@ -188,15 +190,12 @@ describe('AptRepositoryResource', () => {
       components: ['main'],
     });
 
-    const CustomExec = Layer.succeed(SystemCommand, SystemCommand.of({
-      run: (cmd: string) => {
-        commands.push(cmd);
-        return Effect.succeed('');
-      },
+    const NoGpgExec = Layer.succeed(SystemCommand, SystemCommand.of({
+      run: () => Effect.succeed(''),
       execFile: (file, args) => {
         commands.push([file, ...args].join(' '));
-        if (file === 'find') return Effect.succeed('/etc/apt/sources.list.d/broken.list');
-        if (file === 'gpg' && args[0] === '--show-keys') return Effect.fail(new Error('no valid data'));
+        // As on a slim image without gpg installed.
+        if (file === 'gpg') return Effect.fail(new Error('gpg: command not found'));
         return Effect.succeed('');
       },
     }));
@@ -206,15 +205,15 @@ describe('AptRepositoryResource', () => {
         Effect.provide(MockPlatform),
         Effect.provide(MockFS(files)),
         Effect.provide(MockHttp('')),
-        Effect.provide(CustomExec),
+        Effect.provide(NoGpgExec),
       ),
     );
 
-    expect(files['/etc/apt/sources.list.d/broken.list']).toBeUndefined();
+    expect(files['/etc/apt/sources.list.d/someone-else.list']).toBeDefined();
     expect(commands.some((c) => c.startsWith('apt-get update'))).toBe(true);
   });
 
-  it('passes Acquire options to apt-get update to tolerate clock skew', async () => {
+  it('runs a plain apt-get update without disabling Valid-Until checks', async () => {
     const commands: [string, string[]][] = [];
     const files: Record<string, string> = {};
     const app = new App();
@@ -248,12 +247,6 @@ describe('AptRepositoryResource', () => {
 
     const aptUpdate = commands.find(([file]) => file === 'apt-get');
     expect(aptUpdate).toBeDefined();
-    expect(aptUpdate?.[1]).toEqual([
-      'update',
-      '-o',
-      'Acquire::Check-Valid-Until=false',
-      '-o',
-      'Acquire::Max-FutureTime=86400',
-    ]);
+    expect(aptUpdate?.[1]).toEqual(['update']);
   });
 });

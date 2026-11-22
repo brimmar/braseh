@@ -90,7 +90,11 @@ export default () => {
   it('re-extracts a partial dest without .complete including undici-types', async () => {
     const typesDir = await writeFixtureTypes();
     const missingSource = join(dir, 'no-embedded-types');
+    const previousCache = process.env.XDG_CACHE_HOME;
+    process.env.XDG_CACHE_HOME = join(dir, 'cache');
     const dest = ensureEmbeddedTypes(missingSource);
+    // Per-user cache, not a path in shared /tmp that another user could pre-fill.
+    expect(dest.startsWith(join(dir, 'cache', 'braseh'))).toBe(true);
     expect(existsSync(join(dest, '.complete'))).toBe(true);
     expect(existsSync(join(dest, 'undici-types', 'index.d.ts'))).toBe(true);
 
@@ -117,6 +121,8 @@ export default () => {
 `,
     );
     expect(typecheckFile({ configPath, typesDir, typeRoots: [extracted] })).toEqual([]);
+    if (previousCache === undefined) delete process.env.XDG_CACHE_HOME;
+    else process.env.XDG_CACHE_HOME = previousCache;
   });
 
   it('fails on a type error in a helper imported from a parent directory', async () => {
